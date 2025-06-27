@@ -1,13 +1,19 @@
+# riscv.py: Implements the risc-v sim as class RISCV
+# import: from riscv import RISCV
+
+RV_types = ["RV32I", "RV64I"]
+
+
 class RISCV:
 
-    def __init__(self, debug=False, wordlength=32):
-        assert(wordlength in [32,64])
+
+    def __init__(self, RV_type, code, debug=False):
+        assert(RV_type in RV_types)
         assert(type(debug) is bool)
         self.debug = debug
-        self.wordlength = wordlength
+        self.code = code
+        self.RV_type = RV_type
 
-    def runcommand(self, command):
-        assert(type(command) is str)
+    def step(self):
         if self.debug:
-            print("RISCV command: " + command)
-
+            print("RISCV command: ")
