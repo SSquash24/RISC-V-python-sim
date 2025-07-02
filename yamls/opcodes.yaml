@@ -1,0 +1,108 @@
+---
+
+base_instr_types:
+  - R
+  - S
+  - B
+  - U
+  - J
+  - I
+
+'opcode':
+  0b0110011:
+    - 'OP'
+    - 'R'
+    - # funct3
+        0x0:
+          # funct7
+          0x00: 'add'
+          0x20: 'sub'
+        0x4:
+          0x00: 'xor'
+        0x6:
+          0x00: 'or'
+        0x7:
+          0x00: 'and'
+        0x1:
+          0x00: 'sll'
+        0x5:
+          0x00: 'srl'
+          0x20: 'sra'
+        0x2:
+          0x00: 'slt'
+        0x3:
+          0x00: 'sltu'
+
+  0b0010011:
+    - 'OP-IMM'
+    - 'I'
+    - # funct3:
+      0x0: 'addi'
+      0x4: 'xori'
+      0x6: 'ori'
+      0x7: 'andi'
+      0x1:
+        # imm[11:5]
+        0x00: 'slli'
+      0x5:
+        # imm[11:5]
+        0x00: 'srli'
+        0x20: 'srai'
+      0x2: 'slti'
+      0x3: 'sltiu'
+
+  0b0110111:
+    - 'lui'
+    - 'U'
+
+  0b0010111:
+    - 'auipc'
+    - 'U'
+
+  0b1101111:
+    - 'jal'
+    - 'J'
+
+  0b1100111:
+    - 'jalr'
+    - 'I'
+    - # funct3:
+        0x0: 'jalr'
+
+  0b1100011:
+    - 'BRANCH'
+    - 'B'
+    - # funct3:
+        0x0: 'beq'
+        0x1: 'bne'
+        0x4: 'blt'
+        0x5: 'bge'
+        0x6: 'bltu'
+        0x7: 'bgeu'
+
+  0b0000011:
+    - 'LOAD'
+    - 'I'
+    - # funct3:
+        0x0: 'lb'
+        0x1: 'lh'
+        0x2: 'lw'
+        0x4: 'lbu'
+        0x5: 'lhu'
+
+  0b0100011:
+    - 'STORE'
+    - 'S'
+    - # funct3:
+        0x0: 'sb'
+        0x1: 'sh'
+        0x2: 'sw'
+
+  0b1110011:
+    - 'SYSTEM'
+    - 'I'
+    - # funct3:
+        0x0:
+          #imm val
+          0x0: 'ecall'
+          0x1: 'ebreak'

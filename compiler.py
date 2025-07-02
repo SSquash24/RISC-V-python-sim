@@ -1,5 +1,10 @@
 # compiler.py: translate between Assembly shorthands and binary
 
+
+import yamls.read_yaml as read_yaml
+
+print(read_yaml.opcodes)
+
 class Compiler:
 
     @staticmethod
@@ -34,11 +39,9 @@ class Compiler:
 #implementations of specific RISCV architectures
 class Comp_RV32I(Compiler):
 
-    base_instr_types = ['R', 'S', 'B', 'U', 'J']
-
     @staticmethod
     def decompile_from_base_type(bin: str, instr_type: str):
-        assert instr_type in Comp_RV32I.base_instr_types
+        # assert instr_type in Comp_RV32I.base_instr_types
         assert len(bin) == 32
 
         opcode = Compiler.twos_to_int(bin[25:])
@@ -64,6 +67,7 @@ class Comp_RV32I(Compiler):
             case 'J':
                 imm = Compiler.twos_to_int(bin[0] + bin[12:20] + bin[11] + bin[1:11])
                 return opcode, rd, imm
+        return None
 
     @staticmethod
     def compile_R(opcode, rd, funct3, rs1, rs2, funct7):
