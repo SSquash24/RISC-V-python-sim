@@ -17,9 +17,9 @@ class DisplaySim:
 
     def setMemList(self, begin):
         self.memList.delete(0, tk.END)
-        for i in range(begin, begin+16):
+        for i in range(int(begin/4), int(begin/4)+16):
             if i == self.sim.mem_size: break
-            self.memList.insert(tk.END, f"{str(i).zfill(3)}:  {hex(self.sim.mem[i])}")
+            self.memList.insert(tk.END, f"{str(i*self.sim.word_size).zfill(4)}:  {int(self.sim.mem[i], 2):0{2*self.sim.word_size}x}")
 
     def __init__(self, mem_size, code):
         self.sim = RV32I(mem_size, code, debug=True)
@@ -47,8 +47,8 @@ class DisplaySim:
         self.mem_addr_var = tk.StringVar() # StringVar instead of IntVar to allow empty string for typing benefits
         self.mem_addr_var.trace('w', lambda *_: self.setMemList(int(self.mem_addr_var.get())) if self.mem_addr_var.get() else None)
         ttk.Spinbox(memCtrFrame, textvariable=self.mem_addr_var, from_=0, to=mem_size-1, width=8, validate="key",
-                    validatecommand=(self.root.register(lambda s: 0 <= int(s) < mem_size if s.isdigit() else s == ''), '%P')
-                    ).grid(column=1, row=0)
+                    validatecommand=(self.root.register(lambda s: 0 <= int(s) < mem_size*4 if s.isdigit() else s == ''), '%P'),
+                    increment=self.sim.word_size).grid(column=1, row=0)
         memCtrFrame.grid(column=0, row=1)
 
         self.mem_addr_var.set('0')
@@ -77,25 +77,28 @@ class DisplaySim:
 
         self.reglist.delete(0, tk.END)
         for i, reg in enumerate(self.sim.regs):
-            self.reglist.insert(tk.END, f"{'x'+str(i):>3}: {hex(reg)}")
+            self.reglist.insert(tk.END, f"{'x'+str(i):>3}: {reg:0{2*self.sim.word_size}x}")
 
         pass
 
 if __name__ == '__main__':
-    # if len(sys.argv) == 2:
-    #     if sys.argv[1] in ['-h', "--help"]:
-    #         print("Usage: python main.py <codeFile>\nLeave <codeFile> empty for a prompt to give the file")
-    #         exit(0)
-    #     else:
-    #         filename = sys.argv[1]
-    # else:
-    #     filename = filePrompt()
-    #
-    # try:
-    #     code = open(filename, mode='r').read().splitlines()
-    # except PermissionError:
-    #     mb.showerror("SIM Error", f"Could not open file '{filename}'\nPermission denied.")
-    #     exit(1)
-    #
-    # DisplaySim(32, code)
-    DisplaySim(32, [i for i in range(16)])
+    if len(sys.argv) == 2:
+        if sys.argv[1] in ['-h', "--help"]:
+            print("Usage: python main.py <codeFile>\nLeave <codeFile> empty for a prompt to give the file")
+            exit(0)
+        else:
+            filename = sys.argv[1]
+    else:
+        filename = filePrompt()
+
+    try:
+        code = open(filename, mode='r').read().splitlines()
+        code = [i.replace(',', '').split() for i in code if i != "" and i[0] != '#']
+        print(code)
+        # compile code
+        code = [Comp_RV32I.compile_instr(i) for i in code]
+    except PermissionError:
+        mb.showerror("SIM Error", f"Could not open file '{filename}'\nPermission denied.")
+        exit(1)
+
+    DisplaySim(32, code)

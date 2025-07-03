@@ -1,2 +1,9 @@
-HELLO
-WORLD!
+# multiplies 2 nums
+addi x1, x0, 12
+addi x2, x0, 5
+
+xori x4, x2, 1
+beq x0, x4, 2
+add x3, x3, x1
+srli x2, x2, 1
+bne x0, x2, -4

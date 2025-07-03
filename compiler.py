@@ -11,7 +11,7 @@ class Compiler:
     def twos_comp_bin(val : int, bits):
         """compute the 2's complement of int value val"""
         if val < 0:
-            return bin( ~val )[2:].rjust(bits, '1')
+            return bin((-val-1) ^ ((2 << (bits-1)) - 1))[2:]
 
         return bin(val)[2:].rjust(bits, '0')
 
@@ -28,11 +28,12 @@ class Compiler:
         code = open(filename, mode='r').read().splitlines()
         return [self.compile_instr(line) for line in code]
 
-
-    def compile_instr(self, instr):
+    @staticmethod
+    def compile_instr(instr):
         pass
 
-    def decompile_instr(self, binary):
+    @staticmethod
+    def decompile_instr(binary: str):
         pass
 
 
@@ -40,33 +41,40 @@ class Compiler:
 class Comp_RV32I(Compiler):
 
     @staticmethod
-    def decompile_from_base_type(bin: str, instr_type: str):
+    def decompile_instr(binary: str):
         # assert instr_type in Comp_RV32I.base_instr_types
-        assert len(bin) == 32
+        assert len(binary) == 32
 
-        opcode = Compiler.twos_to_int(bin[25:])
-        rd = int(bin[20:25], 2)
-        funct3 = Compiler.twos_to_int(bin[17:20])
-        rs1 = int(bin[12:17], 2)
-        rs2 = int(bin[7:12], 2)
-        funct7 = Compiler.twos_to_int(bin[:7])
+        opcode = int(binary[25:], 2)
+        args1 = read_yaml.opcodes[opcode]
+        instr_type = args1[1]
+        rd = int(binary[20:25], 2)
+        funct3 = int(binary[17:20], 2)
+        rs1 = int(binary[12:17], 2)
+        rs2 = int(binary[7:12], 2)
+        funct7 = int(binary[:7], 2)
 
         match instr_type:
             case 'R':
-                return opcode, rd, funct3, rs1, rs2, funct7
+                return args1[2][funct3][funct7], rd, rs1, rs2
             case 'I':
-                return opcode, rd, funct3, rs1, Compiler.twos_to_int(bin[7:12])
+                instr = args1[2][funct3]
+                imm = Compiler.twos_to_int(binary[0:12])
+                if type(instr) != str:
+                    instr = instr[imm // 16]  # imm[11:5]
+                    imm = imm % 16
+                return instr, rd, rs1, imm
             case 'S':
-                imm = Compiler.twos_to_int(bin[:7] + bin[20:25])
-                return opcode, funct3, rs1, rs2, imm
+                imm = Compiler.twos_to_int(binary[:7] + binary[20:25])
+                return args1[2][funct3], rs1, rs2, imm
             case 'B':
-                imm = Compiler.twos_to_int(bin[0] + bin[24] + bin[1:7] + bin[20:24])
-                return opcode, funct3, rs1, rs2, imm
+                imm = Compiler.twos_to_int(binary[0] + binary[24] + binary[1:7] + binary[20:24] + '0')
+                return args1[2][funct3], rs1, rs2, imm
             case 'U':
-                return opcode, rd, Compiler.twos_to_int(bin[:20])
+                return args1[0], rd, (Compiler.twos_to_int(binary[:20]) << 12)
             case 'J':
-                imm = Compiler.twos_to_int(bin[0] + bin[12:20] + bin[11] + bin[1:11])
-                return opcode, rd, imm
+                imm = Compiler.twos_to_int(binary[0] + binary[12:20] + binary[11] + binary[1:11] + '0')
+                return args1[0], rd, imm
         return None
 
     @staticmethod
@@ -83,29 +91,29 @@ class Comp_RV32I(Compiler):
     def compile_S(opcode, funct3, rs1, rs2, imm):
         assert -2048 <= imm <= 2047
         imm_bin = Compiler.twos_comp_bin(imm, bits=12)
-        return imm_bin[:8] + ''.join([Compiler.twos_comp_bin(*i) for i in [(rs2, 5), (rs1, 5), (funct3, 3)]]) + imm_bin[
-                                                                                                                8:] + Compiler.twos_comp_bin(
-            opcode, 7)
+        return (imm_bin[:7] + ''.join([Compiler.twos_comp_bin(*i) for i in [(rs2, 5), (rs1, 5), (funct3, 3)]])
+                + imm_bin[7:] + Compiler.twos_comp_bin(opcode, 7))
 
     @staticmethod
     def compile_B(opcode, funct3, rs1, rs2, imm):
         assert imm % 2 == 0
-        imm = int(imm / 2)
+        imm = imm // 2
         assert -2048 <= imm <= 2047
         imm_bin = Compiler.twos_comp_bin(imm, bits=12)
-        return imm_bin[0] + imm_bin[2:9] + ''.join(
-            [Compiler.twos_comp_bin(*i) for i in [(rs2, 5), (rs1, 5), (funct3, 3)]]) + imm_bin[9:] + imm_bin[
+        print(imm_bin)
+        return imm_bin[0] + imm_bin[2:8] + ''.join(
+            [Compiler.twos_comp_bin(*i) for i in [(rs2, 5), (rs1, 5), (funct3, 3)]]) + imm_bin[8:] + imm_bin[
             1] + Compiler.twos_comp_bin(opcode, 7)
 
     @staticmethod
-    def compile_U(opcode, rd, funct3, rs1, imm):
+    def compile_U(opcode, rd, imm):
         assert (imm >> 12) << 12 == imm
         imm = imm >> 12
         assert -524288 <= imm <= 524287
         return ''.join([Compiler.twos_comp_bin(*i) for i in [(imm, 20), (rd, 5), (opcode, 7)]])
 
     @staticmethod
-    def compile_J(opcode, rd, funct3, rs1, imm):
+    def compile_J(opcode, rd, imm):
         assert imm % 2 == 0
         imm = imm >> 1
         assert -524288 <= imm <= 524287
@@ -113,3 +121,31 @@ class Comp_RV32I(Compiler):
         return imm_bin[0] + imm_bin[10:] + imm_bin[9] + imm_bin[1:9] + ''.join(
             [Compiler.twos_comp_bin(*i) for i in [(rd, 5), (opcode, 7)]])
 
+    @staticmethod
+    def compile_instr(instr):
+
+        def reg(x):
+            if type(x) is int:
+                return x
+            else:
+                assert x[0] == 'x'
+                return int(x[1:])
+
+        opcode, instr_type, *args = read_yaml.inv_opcodes[instr[0]]
+        match instr_type:
+            case 'R':
+                return Comp_RV32I.compile_R(opcode, reg(instr[1]), args[0], reg(instr[2]), reg(instr[3]), args[1])
+            case 'I':
+                imm = int(instr[3])
+                if len(args) > 1:
+                    imm += int(args[1]) << 4
+                return Comp_RV32I.compile_I(opcode, reg(instr[1]), args[0], reg(instr[2]), imm)
+            case 'S':
+                return Comp_RV32I.compile_S(opcode, args[0], reg(instr[1]), reg(instr[2]), int(instr[3]))
+            case 'B':
+                return Comp_RV32I.compile_B(opcode, args[0], reg(instr[1]), reg(instr[2]), int(instr[3]))
+            case 'U':
+                return Comp_RV32I.compile_U(opcode, reg(instr[1]), int(instr[2]))
+            case 'J':
+                return Comp_RV32I.compile_J(opcode, reg(instr[1]), int(instr[2]))
+        return None
