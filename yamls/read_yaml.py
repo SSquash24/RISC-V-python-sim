@@ -1,7 +1,7 @@
 # read_yaml.py
 # Contains data read from yaml files:
-#   opcode
-#   inv_opcode
+#   opcode: nested dicts
+#   inv_opcode: dict
 
 import yaml
 
@@ -27,11 +27,9 @@ for opcode, info in opcodes.items():
                 if type(data3) is str:
                     inv_opcodes[data3] = (opcode, info[1], funct3)
                 else:
-                    # a few instrs have limits on imm[11:5]
-                    for imm, instr in data3.items():
-                        inv_opcodes[instr] = (opcode, info[1], funct3, imm)
+                    # a few instrs have limits on imm
+                    for imm, instr in data3[1].items():
+                        inv_opcodes[instr] = (opcode, info[1], funct3, data3[0], imm)
 
         case 'U' | 'J':
             inv_opcodes[info[0]] = (opcode, info[1])
-
-

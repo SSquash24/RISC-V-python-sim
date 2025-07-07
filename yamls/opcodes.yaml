@@ -42,12 +42,12 @@ base_instr_types:
       0x6: 'ori'
       0x7: 'andi'
       0x1:
-        # imm[11:5]
-        0x00: 'slli'
+        - 5 # immediate [11:5]
+        - 0x00: 'slli'
       0x5:
-        # imm[11:5]
-        0x00: 'srli'
-        0x20: 'srai'
+        - 5 # immediate [11:5]
+        - 0x00: 'srli'
+          0x20: 'srai'
       0x2: 'slti'
       0x3: 'sltiu'
 
@@ -103,6 +103,6 @@ base_instr_types:
     - 'I'
     - # funct3:
         0x0:
-          #imm val
-          0x0: 'ecall'
-          0x1: 'ebreak'
+          - 0  # immediate values [11:0] aka ALL
+          - 0x0: 'ecall'
+            0x1: 'ebreak'
