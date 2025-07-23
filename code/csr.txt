@@ -1,0 +1,2 @@
+csrrw x1, x2, 1024
+ebreak x0, x0

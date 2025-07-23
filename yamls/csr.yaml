@@ -1,0 +1,11 @@
+'opcode':
+  0b1110011:  # should match SYSTEM in rv32i.yaml
+    - 'SYSTEM'
+    - 'I'
+    - # funct3:
+      0x1: 'csrrw'
+      0x2: 'csrrs'
+      0x3: 'csrrc'
+      0x5: 'csrrwi'
+      0x6: 'csrrsi'
+      0x7: 'csrrci'

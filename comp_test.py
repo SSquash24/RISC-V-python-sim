@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import Comp_RV32I
+from assembler import Assembler_RV32I
 
 class MyTestCase(unittest.TestCase):
     def test_something(self):
@@ -18,8 +18,8 @@ class MyTestCase(unittest.TestCase):
 
         for instr, res in test_data.items():
             with self.subTest(res=res):
-                self.assertEqual(Comp_RV32I.decompile_instr(instr), res, f"decomp RV32I instr: {instr}")
-                self.assertEqual(Comp_RV32I.compile_instr(res), instr, f"compile RV32I instr: {res}")
+                self.assertEqual(Assembler_RV32I.decompile_instr(instr), res, f"decomp RV32I instr: {instr}")
+                self.assertEqual(Assembler_RV32I.compile_instr(res), instr, f"compile RV32I instr: {res}")
 
 
 
