@@ -33,24 +33,25 @@ class RV32I(Module):
         try:
             match instr_type:
                 case 'R':
-                    return True, (args1[2][funct3][funct7], rd, rs1, rs2)
+                    assert args1[-2] == [14, 12]
+                    assert args1[-1][funct3][-2] == [31, 25]
+                    return True, (args1[-1][funct3][-1][funct7], rd, rs1, rs2)
                 case 'I':
-                    instr = args1[2][funct3]
+                    instr = args1[-1][funct3]
                     imm = Module.twos_to_int(binary[0:12])
                     if type(instr) != str:
-                        if instr[0] == 0:
-                            return True, (instr[1][imm], rd, rs1)
-                        start = 1 << (instr[0] - 1)
-
-                        instr = instr[1][imm // start]
-                        imm = imm % start
+                        if instr[-2] == [31, 20]:
+                            return True, (instr[-1][imm], rd, rs1)
+                        assert instr[-2] == [31, 25]
+                        instr = instr[1][funct7]
+                        imm = Module.twos_to_int(binary[7:12])
                     return True, (instr, rd, rs1, imm)
                 case 'S':
                     imm = Module.twos_to_int(binary[:7] + binary[20:25])
-                    return True, (args1[2][funct3], rs1, rs2, imm)
+                    return True, (args1[-1][funct3], rs1, rs2, imm)
                 case 'B':
                     imm = Module.twos_to_int(binary[0] + binary[24] + binary[1:7] + binary[20:24] + '0')
-                    return True, (args1[2][funct3], rs1, rs2, imm)
+                    return True, (args1[-1][funct3], rs1, rs2, imm)
                 case 'U':
                     return True, (args1[0], rd, (Module.twos_to_int(binary[:20]) << 12))
                 case 'J':
@@ -62,34 +63,28 @@ class RV32I(Module):
 
     def assemble(self, *instr):
 
-
         try:
-            opcode, instr_type, *args = RV32I.inv_opcodes[instr[0]]
+            opcode, instr_type, args = RV32I.inv_opcodes[instr[0]]
         except KeyError:
             return False, None
         match instr_type:
             case 'R':
-                return True, RV32I.assemble_R(opcode, Module.reg(instr[1]), args[0], Module.reg(instr[2]), Module.reg(instr[3]), args[1])
+                return True, RV32I.assemble_32(opcode, rd=Module.reg(instr[1]), rs1=Module.reg(instr[2]), rs2=Module.reg(instr[3]), flags=args)
             case 'I':
-                if len(args) > 1:
-                    if args[1] == 0:
-                        imm = args[2]
-                    else:
-                        imm = int(instr[3]) + (int(args[2]) << (args[1] - 1))
+                if len(instr) == 4:
+                    return True, Module.assemble_I(opcode, instr[1], instr[2], int(instr[3]), args)
                 else:
-                    imm = int(instr[3])
-                return True, RV32I.assemble_I(opcode, self.reg(instr[1]), args[0], self.reg(instr[2]), imm)
+                    return True, Module.assemble_32(opcode, rd=Module.reg(instr[1]), rs1=Module.reg(instr[2]), flags=args)
             case 'S':
-                return True, RV32I.assemble_S(opcode, args[0], self.reg(instr[1]), self.reg(instr[2]), int(instr[3]))
+                return True, RV32I.assemble_S(opcode, instr[1], instr[2], int(instr[3]), flags=args)
             case 'B':
-                return True, RV32I.assemble_B(opcode, args[0], self.reg(instr[1]), self.reg(instr[2]), int(instr[3]))
+                return True, RV32I.assemble_B(opcode, instr[1], instr[2], int(instr[3]), flags=args)
             case 'U':
-                return True, RV32I.assemble_U(opcode, self.reg(instr[1]), int(instr[2]))
+                return True, RV32I.assemble_U(opcode, instr[1], int(instr[2]))
             case 'J':
-                return True, RV32I.assemble_J(opcode, self.reg(instr[1]), int(instr[2]))
+                return True, RV32I.assemble_J(opcode, instr[1], int(instr[2]))
             case _:
                 return False, None
-                # raise AssemblerError(f"Invalid instruction type: {instr_type}")
 
     def run_instr(self, instr):
 

@@ -1,0 +1,22 @@
+
+'opcode':
+  0b0111011:
+    - "OP-FP"
+    - 'R'
+    - [31, 27]
+    - # funct5
+      0x00: 'fadd.s'
+      0x01: 'fsub.s'
+      0x02: 'fmul.s'
+      0x03: 'fdiv.s'
+      0x0B:
+        - [24..20]
+        - 0x00: 'sqrt.s'
+      0x05:
+        - [14..12]
+        - 0x0: 'fmin.s'
+          0x1: 'fmax.s'
+  0b0101011: 'fmadd.s'
+  0b0101111: 'fmsub.s'
+  0b0110011: 'fnmsub.s'
+  0b0110111: 'fnmadd.s'

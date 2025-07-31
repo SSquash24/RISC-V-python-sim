@@ -12,40 +12,57 @@ base_instr_types:
   0b0110011:
     - 'OP'
     - 'R'
+    - [14, 12]
     - # funct3
         0x0:
-          # funct7
-          0x00: 'add'
-          0x20: 'sub'
+          - [31, 25]
+          - # funct7
+            0x00: 'add'
+            0x20: 'sub'
         0x4:
-          0x00: 'xor'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'xor'
         0x6:
-          0x00: 'or'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'or'
         0x7:
-          0x00: 'and'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'and'
         0x1:
-          0x00: 'sll'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'sll'
         0x5:
-          0x00: 'srl'
-          0x20: 'sra'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'srl'
+            0x20: 'sra'
         0x2:
-          0x00: 'slt'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'slt'
         0x3:
-          0x00: 'sltu'
+          - [ 31, 25 ]
+          - # funct7
+            0x00: 'sltu'
 
   0b0010011:
     - 'OP-IMM'
     - 'I'
-    - # funct3:
+    - [14, 12]
+    - # funct3
       0x0: 'addi'
       0x4: 'xori'
       0x6: 'ori'
       0x7: 'andi'
       0x1:
-        - 5 # immediate [11:5]
+        - [31, 25] # immediate [11:5]
         - 0x00: 'slli'
       0x5:
-        - 5 # immediate [11:5]
+        - [31, 25]
         - 0x00: 'srli'
           0x20: 'srai'
       0x2: 'slti'
@@ -66,12 +83,14 @@ base_instr_types:
   0b1100111:
     - 'jalr'
     - 'I'
+    - [14, 12]
     - # funct3:
         0x0: 'jalr'
 
   0b1100011:
     - 'BRANCH'
     - 'B'
+    - [14, 12]
     - # funct3:
         0x0: 'beq'
         0x1: 'bne'
@@ -83,6 +102,7 @@ base_instr_types:
   0b0000011:
     - 'LOAD'
     - 'I'
+    - [14, 12]
     - # funct3:
         0x0: 'lb'
         0x1: 'lh'
@@ -93,6 +113,7 @@ base_instr_types:
   0b0100011:
     - 'STORE'
     - 'S'
+    - [14, 12]
     - # funct3:
         0x0: 'sb'
         0x1: 'sh'
@@ -101,8 +122,9 @@ base_instr_types:
   0b1110011:
     - 'SYSTEM'
     - 'I'
+    - [14, 12]
     - # funct3:
         0x0:
-          - 0  # immediate values [11:0] aka ALL
+          - [31, 20]  # ALL immediate
           - 0x0: 'ecall'
             0x1: 'ebreak'

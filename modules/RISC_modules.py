@@ -87,40 +87,41 @@ class Module:
         return int(binary[25:], 2), int(binary[20:25], 2), int(binary[12:17], 2), int(binary[7:12], 2), int(
             binary[17:20], 2), int(binary[:7], 2)
 
-    # assemble methods
-    @staticmethod
-    def assemble_R(opcode, rd, funct3, rs1, rs2, funct7):
-        return ''.join(
-            [Module.twos_comp_bin(*i) for i in
-             [(funct7, 7), (rs2, 5), (rs1, 5), (funct3, 3), (rd, 5), (opcode, 7)]])
+    # # assemble methods
+    # @staticmethod
+    # def assemble_R(opcode, rd, funct3, rs1, rs2, funct7):
+    #
 
     @staticmethod
-    def assemble_I(opcode, rd, funct3, rs1, imm):
+    def assemble_I(opcode, rd, rs1, imm, flags):
         if not -2048 <= imm <= 2047:
             raise AssemblerError(f"Invalid immediate value for I-type instr: {imm}")
-        return ''.join(
-            [Module.twos_comp_bin(*i) for i in [(imm, 12), (rs1, 5), (funct3, 3), (rd, 5), (opcode, 7)]])
+        flags[(31,20)] = Module.twos_comp_bin(imm, bits=12)
+        return Module.assemble_32(opcode, Module.reg(rd), Module.reg(rs1), flags=flags)
 
     @staticmethod
-    def assemble_S(opcode, funct3, rs1, rs2, imm):
+    def assemble_S(opcode, rs1, rs2, imm, flags):
         if not -2048 <= imm <= 2047:
             raise AssemblerError(f"Invalid immediate value for S-type instr: {imm}")
         imm_bin = Module.twos_comp_bin(imm, bits=12)
-        return (imm_bin[:7] + ''.join([Module.twos_comp_bin(*i) for i in [(rs2, 5), (rs1, 5), (funct3, 3)]])
-                + imm_bin[7:] + Module.twos_comp_bin(opcode, 7))
+        flags[(31,25)] = imm_bin[0:7]
+        flags[(11,7)] = imm_bin[7:]
+        return Module.assemble_32(opcode, rs1=Module.reg(rs1), rs2=Module.reg(rs2), flags=flags)
 
     @staticmethod
-    def assemble_B(opcode, funct3, rs1, rs2, imm):
+    def assemble_B(opcode, rs1, rs2, imm, flags):
         if not imm % 2 == 0:
             raise AssemblerError(
                 f"Invalid immediate value for B-type instr: {imm}\nValue should be an even number.")
-        imm = imm // 2
+        imm = imm >> 1
         if not -2048 <= imm <= 2047:
             raise AssemblerError(f"Invalid immediate value for B-type instr: {imm}")
         imm_bin = Module.twos_comp_bin(imm, bits=12)
-        return imm_bin[0] + imm_bin[2:8] + ''.join(
-            [Module.twos_comp_bin(*i) for i in [(rs2, 5), (rs1, 5), (funct3, 3)]]) + imm_bin[8:] + imm_bin[
-            1] + Module.twos_comp_bin(opcode, 7)
+        flags[(31,31)] = imm_bin[0]
+        flags[(30,25)] = imm_bin[2:8]
+        flags[(11,8)] = imm_bin[8:]
+        flags[(7,7)] = imm_bin[1]
+        return Module.assemble_32(opcode, rs1=Module.reg(rs1), rs2=Module.reg(rs2), flags=flags)
 
     @staticmethod
     def assemble_U(opcode, rd, imm):
@@ -130,7 +131,7 @@ class Module:
         imm = imm >> 12
         if not -524288 <= imm <= 524287:
             raise AssemblerError(f"Invalid immediate value for U-type instr: {imm}")
-        return ''.join([Module.twos_comp_bin(*i) for i in [(imm, 20), (rd, 5), (opcode, 7)]])
+        return Module.assemble_32(opcode, rd=Module.reg(rd), flags={(31,12): Module.twos_comp_bin(imm, bits=20)})
 
     @staticmethod
     def assemble_J(opcode, rd, imm):
@@ -140,9 +141,41 @@ class Module:
         imm = imm >> 1
         if not -524288 <= imm <= 524287:
             raise AssemblerError(f"Invalid immediate value for J-type instr: {imm}")
-        imm_bin = Module.twos_comp_bin(imm, bits=20)
-        return imm_bin[0] + imm_bin[10:] + imm_bin[9] + imm_bin[1:9] + ''.join(
-            [Module.twos_comp_bin(*i) for i in [(rd, 5), (opcode, 7)]])
+        imm = Module.twos_comp_bin(imm, bits=20)
+        return Module.assemble_32(opcode, rd=Module.reg(rd),
+                                        flags={(31, 31): imm[0], (30, 21): imm[10:], (20, 20): imm[9],
+                                               (19, 12): imm[1:9]})
+
+    @staticmethod
+    def assemble_32(opcode, rd=None, rs1=None, rs2=None, flags=None):
+        res = ['u' for _ in range(32)]
+        if type(opcode) is int:
+            opcode = bin(opcode)[2:].zfill(7)
+        res[-7:] = opcode
+        if rd is not None:
+            if type(rd) is int:
+                rd = bin(rd)[2:].zfill(5)
+            assert len(rd) == 5
+            res[20:25] = rd
+        if rs1 is not None:
+            if type(rs1) is int:
+                rs1 = bin(rs1)[2:].zfill(5)
+            assert len(rs1) == 5
+            res[12:17] = rs1
+        if rs2 is not None:
+            if type(rs2) is int:
+                rs2 = bin(rs2)[2:].zfill(5)
+            assert len(rs2) == 5
+            res[7:12] = rs2
+        if flags is not None:
+            for index, data in flags.items():
+                if type(data) is int:
+                    data = bin(data)[2:].zfill(1+index[0]-index[1])
+
+                res[31-index[0]:32-index[1]] = data
+        assert 'u' not in res
+        return ''.join(res)
+
 
     def _set_reg(self, reg, val):
         """

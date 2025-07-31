@@ -2,6 +2,7 @@
   0b1110011:  # should match SYSTEM in rv32i.yaml
     - 'SYSTEM'
     - 'I'
+    - [14, 12]
     - # funct3:
       0x1: 'csrrw'
       0x2: 'csrrs'
