@@ -1,22 +1,68 @@
+'csr':
+  'fcsr': 0x0003
+  'fflags': 0x0001
+  'ffrm': 0x0002
 
 'opcode':
   0b0111011:
     - "OP-FP"
     - 'R'
-    - [31, 27]
-    - # funct5
-      0x00: 'fadd.s'
-      0x01: 'fsub.s'
-      0x02: 'fmul.s'
-      0x03: 'fdiv.s'
-      0x0B:
-        - [24..20]
-        - 0x00: 'sqrt.s'
-      0x05:
-        - [14..12]
-        - 0x0: 'fmin.s'
-          0x1: 'fmax.s'
-  0b0101011: 'fmadd.s'
-  0b0101111: 'fmsub.s'
-  0b0110011: 'fnmsub.s'
-  0b0110111: 'fnmadd.s'
+    - [26, 25]
+    - 0x0:
+      - [31, 27]
+      - # funct5
+        0x00: 'fadd.s'
+        0x01: 'fsub.s'
+        0x02: 'fmul.s'
+        0x03: 'fdiv.s'
+        0x04:
+          - [14, 12]
+          - 0x0: 'fsgnj.s'
+            0x1: 'fsgnjn.s'
+            0x2: 'fsgnjx.s'
+        0x0B:
+          - [24, 20]
+          - 0x00: 'fsqrt.s'
+        0x05:
+          - [14, 12]
+          - 0x0: 'fmin.s'
+            0x1: 'fmax.s'
+        0x14:
+          - [14, 12]
+          - 0x0: 'fle.s'
+            0x1: 'flt.s'
+            0x2: 'feq.s'
+        0x18:
+          - [24, 20]
+          - 0x00: 'fcvt.w.s'
+            0x01: 'fcvt.wu.s'
+        0x1A:
+          - [24, 20]
+          - 0x00: 'fcvt.s.w'
+            0x01: 'fcvt.s.wu'
+        0x1C:
+          - [14, 12]
+          - 0x0: 'fmv.x.w'
+            0x1: 'fclass.s'
+  0b0101011:
+    - 'fmadd.s'
+    - 'R4'
+  0b0101111:
+    - 'fmsub.s'
+    - 'R4'
+  0b0110011:
+    - 'fnmsub.s'
+    - 'R4'
+  0b0110111:
+    - 'fnmadd.s'
+    - 'R4'
+  0b0000111:
+    - "LOAD-FP"
+    - 'I'
+    - [14,12]
+    - 0x2: 'flw'
+  0b0100111:
+    - "STORE-FP"
+    - "I"
+    - [14,12]
+    - 0x2: 'fsw'

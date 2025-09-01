@@ -14,6 +14,7 @@ from riscv import RISCV
 from modules.RISC_modules import RVError, AssemblerError
 from modules.RV32I import RV32I
 from modules.csr import CSR
+from modules.Float import Float
 
 def file_prompt():
     return fd.askopenfilename(title="Select code file")
@@ -27,8 +28,8 @@ class DisplaySim:
             if i == self.sim.state['mem_size']: break
             self.memList.insert(tk.END, f"{i*self.sim.state['word_size']:04x}:  {int(self.sim.state['mem'][i], 2):0{2*self.sim.state['word_size']}x}")
 
-    def __init__(self, mem_size, code):
-        self.sim = RISCV([RV32I, CSR], mem_size, code, debug=True)
+    def __init__(self, mem_size, code, modules):
+        self.sim = RISCV(modules, mem_size, code, debug=True)
 
         # create tkinter window
         self.root = tk.Tk()
@@ -87,8 +88,16 @@ class DisplaySim:
         ttk.Label(regFrame, text="PC:", width=3).grid(column=0, row=0, sticky="e")
         ttk.Label(regFrame, textvariable=self.pc_var, width=18).grid(column=1, row=0, sticky="w")
 
+
         self.reglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, font='TkFixedFont')
         self.reglist.grid(column=0, row=1, columnspan=2)
+
+        if Float in modules:
+            self.freglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, width=36, font='TkFixedFont')
+            self.freglist.grid(column=2, row=1)
+        else:
+            self.freglist = None
+
 
         regFrame.grid(column=0, row=0, rowspan=2)
 
@@ -133,6 +142,11 @@ class DisplaySim:
         for i, reg in enumerate(self.sim.state['regs']):
             self.reglist.insert(tk.END, f"{'x'+str(i):>3}: {reg:0{2*self.sim.state['word_size']}x}")
 
+        if self.freglist is not None:
+            self.freglist.delete(0, tk.END)
+            for i, reg in enumerate(self.sim.state['fregs']):
+                self.freglist.insert(tk.END, f"{'f'+str(i):>3}: {'%08X' % int(reg.bits(), 2)} = {reg.value()}")
+
         # next instr
         try:
             self.next_instr_var.set(self.sim.unassemble(self.sim.state['mem'][self.sim.state['pc'] // 4])[0])
@@ -145,7 +159,7 @@ class DisplaySim:
 
 # main code reads file and creates instance of DisplaySim (the class above)
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
+    if len(sys.argv) >= 2:
         if sys.argv[1] in ['-h', "--help"]:
             print("Usage: python main.py <codeFile>\nLeave <codeFile> empty for a prompt to give the file")
             exit(0)
@@ -154,6 +168,12 @@ if __name__ == '__main__':
     else:
         filename = file_prompt()
 
+    modules = [RV32I]
+    if '-c' in sys.argv:
+        print("Using module CSR")
+        modules.append(CSR)
+    if '-f' in sys.argv:
+        modules.append(Float)
 
     try:
         code = open(filename, 'r').read().split('\n')
@@ -161,4 +181,4 @@ if __name__ == '__main__':
         mb.showerror('Cannot open file', str(e))
         quit()
 
-    DisplaySim(32, code)
+    DisplaySim(32, code, modules)

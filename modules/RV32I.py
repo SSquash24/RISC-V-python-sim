@@ -57,6 +57,8 @@ class RV32I(Module):
                 case 'J':
                     imm = Module.twos_to_int(binary[0] + binary[12:20] + binary[11] + binary[1:11] + '0')
                     return True, (args1[0], rd, imm)
+                case _:
+                    return False, None
         except KeyError:
             pass
         return False, None

@@ -5,10 +5,19 @@ class CSR(Module):
 
     opcodes, inv_opcodes = read_yaml('csr.yaml')
 
-    def __init__(self, state):
-        self.state = state
-        state['csrs'] = {}  # csr is of form addr [bits] : (val [int], effect(read, write) [Bool, Bool -> None])
+    """ Set csr with side effects"""
+    def set_csr(self, a, val):
+        if type(a) is int:
+            a = bin(a)[2:].rjust(32, '0')
 
+        old_val = self.state['csr'][a][0]
+        self.state['csr'][a][0] = self.state['csr'][a][1](old_val, val, False, True)
+        return self.state['csr'][a][0]
+
+    def __init__(self, state):
+        super().__init__(state)
+        state['csrs'] = {}  # csr is of form addr [bits] : (read_func (Bool = True -> int), write_func (int -> None))
+        state['set_csr'] = lambda a, x: self.set_csr(a, x) # access to set_csr func for other modules
 
     def assemble(self, *instr):
         try:
@@ -39,56 +48,62 @@ class CSR(Module):
                     raise RVError(f"CSR Error: Cannot write to CSR: {instr[2]}")
 
                 new_val = self._read_reg(args[1])
-                self._set_reg(args[0], self.state['csrs'][addr][0])
+                if args[0] != 0:
+                    old_val = self.state['csrs'][addr][0]() #read
+                    self._set_reg(args[0], old_val)
 
-                self.state['csrs'][addr][0] = new_val
-                self.state['csrs'][addr][1](args[0] != 0, True) # call read/write effect
+
+                self.state['csrs'][addr][1](new_val) #write value
             case 'csrrs':
                 if not writable and args[1] != 0:
                     raise RVError(f"CSR Error: Cannot write to CSR: {instr[2]}")
 
-                new_val = self.state['csrs'][addr][0] | self._read_reg(args[1])
-                self._set_reg(args[0], self.state['csrs'][addr][0])
+                old_val = self.state['csrs'][addr][0](args[0] != 0) #read
+                new_val = old_val | self._read_reg(args[1])
+                self._set_reg(args[0], old_val)
 
-                self.state['csrs'][addr][0] = new_val
-                self.state['csrs'][addr][1](args[0] != 0, args[1] != 0)  # call read/write effect
+                if args[1] != 0:
+                    self.state['csrs'][addr][1](new_val)  # write value
 
             case 'csrrc':
                 if not writable and args[1] != 0:
                     raise RVError(f"CSR Error: Cannot write to CSR: {instr[2]}")
 
-                new_val = self.state['csrs'][addr][0] ^ ((1 << 32) - self._read_reg(args[1]) - 1)
-                self._set_reg(args[0], self.state['csrs'][addr][0])
+                old_val = self.state['csrs'][addr][0](args[0] != 0) # read
+                new_val = old_val ^ ((1 << 32) - self._read_reg(args[1]) - 1)
+                self._set_reg(args[0], old_val)
 
-                self.state['csrs'][addr][0] = new_val
-                self.state['csrs'][addr][1](args[0] != 0, args[1] != 0)  # call read/write effect
+                if args[1] != 0:
+                    self.state['csrs'][addr][1](new_val)  # write val
 
             case 'csrrwi':
                 if not writable:
                     raise RVError(f"CSR Error: Cannot write to CSR: {instr[2]}")
-
                 new_val = args[1]
-                self._set_reg(args[0], self.state['csrs'][addr][0])
+                if args[0] != 0:
+                    old_val = self.state['csrs'][addr][0]() # read
+                    self._set_reg(args[0], old_val)
 
-                self.state['csrs'][addr][0] = new_val
-                self.state['csrs'][addr][1](args[0] != 0, True)  # call read/write effect
+                self.state['csrs'][addr][1](new_val)  # write val
 
             case 'csrrsi':
                 if not writable and args[1] != 0:
                     raise RVError(f"CSR Error: Cannot write to CSR: {instr[2]}")
 
-                new_val = self.state['csrs'][addr][0] | args[1]
-                self._set_reg(args[0], self.state['csrs'][addr][0])
+                old_val = self.state['csrs'][addr][0](args[0] != 0)
+                new_val = old_val | args[1]
+                self._set_reg(args[0], old_val)
 
-                self.state['csrs'][addr][0] = new_val
-                self.state['csrs'][addr][1](args[0] != 0, args[1] != 0)  # call read/write effect
+                if args[1] != 0:
+                    self.state['csrs'][addr][1](new_val)  # call read/write effect
 
             case 'csrrci':
                 if not writable and args[1] != 0:
                     raise RVError(f"CSR Error: Cannot write to CSR: {instr[2]}")
 
-                new_val = self.state['csrs'][addr][0] ^ ((1 << 32) - args[1] - 1)
-                self._set_reg(args[0], self.state['csrs'][addr][0])
+                old_val = self.state['csrs'][addr][0](args[0] != 0)
+                new_val = old_val ^ ((1 << 32) - args[1] - 1)
+                self._set_reg(args[0], old_val)
 
-                self.state['csrs'][addr][0] = new_val
-                self.state['csrs'][addr][1](args[0] != 0, args[1] != 0)  # call read/write effect
+                if args[1] != 0:
+                    self.state['csrs'][addr][1](new_val)  # call read/write effect

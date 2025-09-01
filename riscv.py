@@ -3,7 +3,7 @@ riscv.py
 Implements the simulator as a class that handles many 'Modules'
 Modules are defined in the modules folder, with layout as defined in RISC_modules.py
 """
-
+import struct
 
 from modules.RISC_modules import RVError, Module
 
@@ -31,6 +31,10 @@ class RISCV:
                     case 'bool':
                         val = int(line[1])
                         self.code.append(Module.twos_comp_bin(val, 8).rjust(self.state['word_size']*8, '0'))
+                    case 'float':
+                        val = float(line[1])
+                        bits, = struct.unpack('!I', struct.pack('!f', val))
+                        self.code.append("{:032b}".format(bits))
             else:
                 self.code.append(self.assemble(*line)[0])
 
@@ -48,6 +52,7 @@ class RISCV:
         return line.strip().replace(',', '').split('#', 1)[0].split()
 
     def assemble(self, instr, *args):
+        print(instr, *args)
         for m in self.modules.values():
             success, res = m.assemble(instr, *args)
             if success:

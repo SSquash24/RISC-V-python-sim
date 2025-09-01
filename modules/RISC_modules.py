@@ -61,7 +61,7 @@ class Module:
         if type(x) is int:
             val = x
         else:
-            assert x[0] == 'x'
+            assert x[0] in ['x', 'f']
             val = int(x[1:])
         if not 0 <= val <= 31:
             raise AssemblerError(f"Invalid reg value: {x}")
@@ -91,6 +91,13 @@ class Module:
     # @staticmethod
     # def assemble_R(opcode, rd, funct3, rs1, rs2, funct7):
     #
+
+    @staticmethod
+    def get_part(binary, part):
+        """Returns part of binary string as given by 2-elem list part
+        :param part: [a, b], a>=b, 0 is right-most elem, gets inclusive"""
+        lastbit = len(binary)-1
+        return binary[lastbit-part[0]:lastbit-part[1]]
 
     @staticmethod
     def assemble_I(opcode, rd, rs1, imm, flags):
@@ -147,7 +154,7 @@ class Module:
                                                (19, 12): imm[1:9]})
 
     @staticmethod
-    def assemble_32(opcode, rd=None, rs1=None, rs2=None, flags=None):
+    def assemble_32(opcode, rd=None, rs1=None, rs2=None, rs3=None, flags=None):
         res = ['u' for _ in range(32)]
         if type(opcode) is int:
             opcode = bin(opcode)[2:].zfill(7)
@@ -167,6 +174,11 @@ class Module:
                 rs2 = bin(rs2)[2:].zfill(5)
             assert len(rs2) == 5
             res[7:12] = rs2
+        if rs3 is not None:
+            if type(rs3) is int:
+                rs3 = bin(rs2)[2:].zfill(5)
+            assert len(rs3) == 5
+            res[0:5] = rs3
         if flags is not None:
             for index, data in flags.items():
                 if type(data) is int:
