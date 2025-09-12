@@ -9,4 +9,7 @@ flw f1, x0, 4
 flw f2, x0, 8
 
 fadd.s f3, f1, f2, RNE
+fclass.s x3, f0
+fmv.x.w x1, f3
+fcvt.w.s x2, f3, RTZ
 ebreak x0, x0

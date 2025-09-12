@@ -45,14 +45,14 @@ class RISCV:
             print("Resetting RISCV simulator")
         self.state['pc'] = 0
         self.state['mem'] = self.code + ['0' * 8 * self.state['word_size']] * (self.state['mem_size'] - len(self.code))
-        self.state['regs'] = [0 for _ in range(self.state['reg_count'])]
         self.state['status'] = 'RUNNING'
+        for m in self.modules.values():
+            m.reset_module()
 
     def clean_instr(self, line):
         return line.strip().replace(',', '').split('#', 1)[0].split()
 
     def assemble(self, instr, *args):
-        print(instr, *args)
         for m in self.modules.values():
             success, res = m.assemble(instr, *args)
             if success:

@@ -213,6 +213,7 @@ class RV32I(Module):
                 if self.state['debug']:
                     print("RISCV HALT")
 
-    # helper methods
+    def reset_module(self):
+        self.state['regs'] = [0 for _ in range(self.state['reg_count'])]
 
 

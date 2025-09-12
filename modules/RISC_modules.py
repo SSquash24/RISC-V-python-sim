@@ -53,6 +53,13 @@ class Module:
         :param instr: instructions in assembly list form
         """
         pass
+
+    @abstractmethod
+    def reset_module(self):
+        """
+        Reset the module, so it is at the same state that it would be if the module was created anew
+        """
+        pass
     
     # useful methods
 

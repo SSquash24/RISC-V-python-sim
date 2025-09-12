@@ -89,7 +89,7 @@ class DisplaySim:
         ttk.Label(regFrame, textvariable=self.pc_var, width=18).grid(column=1, row=0, sticky="w")
 
 
-        self.reglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, font='TkFixedFont')
+        self.reglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, width=30, font='TkFixedFont')
         self.reglist.grid(column=0, row=1, columnspan=2)
 
         if Float in modules:
@@ -140,7 +140,7 @@ class DisplaySim:
 
         self.reglist.delete(0, tk.END)
         for i, reg in enumerate(self.sim.state['regs']):
-            self.reglist.insert(tk.END, f"{'x'+str(i):>3}: {reg:0{2*self.sim.state['word_size']}x}")
+            self.reglist.insert(tk.END, f"{'x'+str(i):>3}: {reg:0{2*self.sim.state['word_size']}x} = {reg}")
 
         if self.freglist is not None:
             self.freglist.delete(0, tk.END)
