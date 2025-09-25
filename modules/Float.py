@@ -111,7 +111,11 @@ class RV_Float:
     def __add__(self, other):
         assert(isinstance(other, RV_Float))
         assert(self.rm == other.rm)
-        if (self.exponent < other.exponent):
+        if self.isNaN() or other.isNaN():
+            res = RV_Float(rm=self.rm)
+            res.makeNaN()
+            return res
+        elif (self.exponent < other.exponent):
             return other.__add__(self)
         else:
             exp_diff = self.exponent - other.exponent
@@ -134,6 +138,10 @@ class RV_Float:
 
     def __sub__(self, other):
         assert(isinstance(other, RV_Float))
+        if self.isNaN() or other.isNaN():
+            res = RV_Float(rm=self.rm)
+            res.makeNaN()
+            return res
         other.sign = (other.sign + 1) % 2
         res = self + other
         other.sign = (other.sign + 1) % 2
@@ -141,6 +149,10 @@ class RV_Float:
 
     def __mul__(self, other):
         assert(isinstance(other, RV_Float))
+        if self.isNaN() or other.isNaN():
+            res = RV_Float(rm=self.rm)
+            res.makeNaN()
+            return res
         res = RV_Float()
         res.sign = 1 if self.sign + other.sign == 1 else 0
         res.exponent = self.exponent + other.exponent
@@ -150,6 +162,10 @@ class RV_Float:
 
     def __truediv__(self, other):
         assert(isinstance(other, RV_Float))
+        if self.isNaN() or other.isNaN():
+            res = RV_Float(rm=self.rm)
+            res.makeNaN()
+            return res
         res = RV_Float()
         res.sign = 1 if self.sign + other.sign == 1 else 0
         res.exponent = self.exponent - other.exponent
@@ -165,6 +181,10 @@ class RV_Float:
         return res
 
     def sqrt(self):
+        if self.isNaN() or self.sign == 1:
+            res = RV_Float(rm=self.rm)
+            res.makeNaN()
+            return res
         # Optional TODO: Replace this with IEEE sqrt method and add inexact
         res = RV_Float()
         res.sign, res.exponent, res.mantissa = RV_Float._convert(math.sqrt(self.value()))
@@ -173,7 +193,9 @@ class RV_Float:
 
     def __lt__(self, other):
         assert(isinstance(other, RV_Float))
-        if self.sign < other.sign:
+        if self.isNaN() or other.isNaN():
+            return False
+        elif self.sign < other.sign:
             return False
         elif self.sign > other.sign:
             return True
@@ -190,6 +212,8 @@ class RV_Float:
 
     def __le__(self, other):
         assert(isinstance(other, RV_Float))
+        if self.isNaN() or other.isNaN():
+            return False
         if self == other:
             return True
         else:
@@ -197,6 +221,8 @@ class RV_Float:
 
     def __eq__(self, other):
         assert(isinstance(other, RV_Float))
+        if self.isNaN() or other.isNaN():
+            return False
         return self.bits == other.bits
 
     def __int__(self):
@@ -227,6 +253,7 @@ class RV_Float:
 NaN = RV_Float()
 NaN.makeNaN()
 
+# TODO: Make Signalling NaNs work
 sNaN = RV_Float()
 sNaN.makeNaN()
 sNaN.mantissa = 5 << 21
@@ -376,7 +403,6 @@ class Float(Module):
 
     def run_instr(self, instr):
 
-        # TODO NaN
         instr, *args = instr
         match instr:
             # OP-FP
@@ -465,7 +491,6 @@ class Float(Module):
                 self._set_reg(args[0], Module.twos_to_int(self._read_freg(args[1]).bits()))
             case 'fclass.s':
                 x = self._read_freg(args[1])
-                print(x)
                 res = 1
                 if x.isNaN():
                     # quiet, signalling, or infinity
@@ -499,7 +524,6 @@ class Float(Module):
                             res <<= 1
                         else:
                             res <<= 6
-                print(res)
                 self._set_reg(args[0], res)
 
             case 'fmadd.s':
