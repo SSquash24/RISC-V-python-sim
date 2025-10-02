@@ -49,7 +49,8 @@ class RISCV:
         for m in self.modules.values():
             m.reset_module()
 
-    def clean_instr(self, line):
+    @staticmethod
+    def clean_instr(line):
         return line.strip().replace(',', '').split('#', 1)[0].split()
 
     def assemble(self, instr, *args):
@@ -74,3 +75,8 @@ class RISCV:
         module.run_instr(instr)
         self.state['pc'] += self.state['word_size']
         return instr
+
+    # steps until status is no longer 'RUNNING'
+    def run(self):
+        while self.state['status'] == 'RUNNING':
+            self.step()

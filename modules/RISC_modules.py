@@ -108,9 +108,16 @@ class Module:
 
     @staticmethod
     def assemble_I(opcode, rd, rs1, imm, flags):
-        if not -2048 <= imm <= 2047:
+        max = 2047
+        min = -2048
+        if (31, 25) in flags:
+            max = 31
+            min = 0
+            flags[(24, 20)] = bin(imm)[2:].rjust(5, '0')
+        else:
+            flags[(31, 20)] = Module.twos_comp_bin(imm, bits=12)
+        if not min <= imm <= max:
             raise AssemblerError(f"Invalid immediate value for I-type instr: {imm}")
-        flags[(31,20)] = Module.twos_comp_bin(imm, bits=12)
         return Module.assemble_32(opcode, Module.reg(rd), Module.reg(rs1), flags=flags)
 
     @staticmethod
@@ -139,10 +146,10 @@ class Module:
 
     @staticmethod
     def assemble_U(opcode, rd, imm):
-        if not (imm >> 12) << 12 == imm:
-            raise AssemblerError(
-                f"Invalid immediate value for U-type instr: {imm}\nValue should be a multiple of 2^12")
-        imm = imm >> 12
+        # if not (imm >> 12) << 12 == imm:
+        #     raise AssemblerError(
+        #         f"Invalid immediate value for U-type instr: {imm}\nValue should be a multiple of 2^12")
+        # imm = imm >> 12
         if not -524288 <= imm <= 524287:
             raise AssemblerError(f"Invalid immediate value for U-type instr: {imm}")
         return Module.assemble_32(opcode, rd=Module.reg(rd), flags={(31,12): Module.twos_comp_bin(imm, bits=20)})
@@ -183,7 +190,7 @@ class Module:
             res[7:12] = rs2
         if rs3 is not None:
             if type(rs3) is int:
-                rs3 = bin(rs2)[2:].zfill(5)
+                rs3 = bin(rs3)[2:].zfill(5)
             assert len(rs3) == 5
             res[0:5] = rs3
         if flags is not None:

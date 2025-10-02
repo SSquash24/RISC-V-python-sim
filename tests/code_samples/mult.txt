@@ -1,3 +1,5 @@
+MODULES: RV32I
+MEM: 16
 # multiplies 2 nums
 
 jal x0, 12
@@ -8,9 +10,6 @@ jal x0, 12
 lw x1, x0, 4
 lw x2, x0, 8
 
-# addi x1, x0, 72
-# addi x2, x0, 43
-
 andi x4, x2, 1
 beq x0, x4, 8
 add x3, x3, x1
@@ -20,3 +19,6 @@ bne x0, x2, -20
 
 ebreak
 
+RESULTS---
+x3=54
+x4=1

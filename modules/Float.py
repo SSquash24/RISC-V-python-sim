@@ -4,7 +4,7 @@ from modules.RISC_modules import *
 from yamls.read_yaml import read_yaml
 import struct
 
-rm = {0: 'RNE', 1: 'RTZ', 2: 'RDN', 3: 'RUP', 4: 'RMM', 5: 'DYN'}
+rm = {0: 'RNE', 1: 'RTZ', 2: 'RDN', 3: 'RUP', 4: 'RMM', 7: 'DYN'}
 inv_rm = {v: bin(k)[2:].rjust(3, '0') for k, v in rm.items()}
 
 class RV_Float:
@@ -327,15 +327,19 @@ class Float(Module):
     def assemble(self, *instr):
         try:
             opcode, instr_type, args = Float.inv_opcodes[instr[0]]
+            args = args.copy()
         except KeyError:
             return False, None
         match instr_type:
             case 'R':
                 if (14, 12) in args.keys():
-                    if len(instr) > 4:
-                        return False, None
-                    elif len(instr) == 3:
+                    if len(instr) == 3:
                         return True, self.assemble_32(opcode, rd=Module.reg(instr[1]), rs1=Module.reg(instr[2]), flags=args)
+                    elif len(instr) == 4:
+                        return True, self.assemble_32(opcode, rd=Module.reg(instr[1]), rs1=Module.reg(instr[2]), rs2=Module.reg(instr[3]), flags=args)
+                    else:
+                        return False, None
+
                 else:
                     # rounding mode needs spec
                     args[(14,12)] = inv_rm[instr[-1]]
@@ -349,8 +353,9 @@ class Float(Module):
             case 'I':
                 return True, Module.assemble_I(opcode, instr[1], instr[2], int(instr[3]), flags=args)
             case 'S':
-                return True, Module.assemble_S(opcode, instr[1], instr[2], int(instr[3]), flags=args)
+                return True, Module.assemble_S(opcode, instr[2], instr[1], int(instr[3]), flags=args)
             case 'R4':
+                args[(14, 12)] = inv_rm[instr[-1]]
                 return True, Module.assemble_32(opcode, rd=Module.reg(instr[1]), rs1=Module.reg(instr[2]),
                                                 rs2=Module.reg(instr[3]), rs3=Module.reg(instr[4]), flags=args)
             case _:
@@ -394,9 +399,10 @@ class Float(Module):
                 case 'S': # stores
                     assert args1[-2] == [14, 12]
                     imm = Module.twos_to_int(binary[0:7] + binary[20:25])
-                    return True, (args1[-1][funct3], rs1, rs2, imm)
+                    return True, (args1[-1][funct3], rs2, rs1, imm)
                 case 'R4': # FMADD.S and similar
-                    return True, (args1[0], rd, rs1, rs2, int(binary[:5], 2))
+                    assert args1[-2] == [26, 25]
+                    return True, (args1[-1][width], rd, rs1, rs2, int(binary[:5], 2), rm[funct3])
         except KeyError:
             pass
         return False, None

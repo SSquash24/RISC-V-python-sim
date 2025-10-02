@@ -1,4 +1,6 @@
-# float minmax
+MODULES: Float RV32I
+MEM: 16
+# float add
 
 jal x0, 12
 
@@ -13,3 +15,11 @@ fclass.s x3, f0
 fmv.x.w x1, f3
 fcvt.w.s x2, f3, RTZ
 ebreak
+
+RESULTS---
+x1=1082916864
+x2=4
+x3=16
+f1=8.25
+f2=-3.875
+f3=4.375

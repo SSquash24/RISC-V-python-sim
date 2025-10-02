@@ -121,9 +121,9 @@ base_instr_types:
 
   0b1110011:
     - 'SYSTEM'
-    - 'I'
-    - [14, 12]
-    - # funct3:
+    - 'SYS'
+    - [19, 7]
+    - # funct3, rs1, rd:
         0x0:
           - [31, 20]  # ALL immediate
           - 0x0: 'ecall'

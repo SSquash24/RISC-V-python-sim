@@ -44,7 +44,7 @@ class RV32I(Module):
                             return True, (instr[-1][imm], rd, rs1)
                         assert instr[-2] == [31, 25]
                         instr = instr[1][funct7]
-                        imm = Module.twos_to_int(binary[7:12])
+                        imm = int(binary[7:12], 2)
                     return True, (instr, rd, rs1, imm)
                 case 'S':
                     imm = Module.twos_to_int(binary[:7] + binary[20:25])
@@ -53,10 +53,17 @@ class RV32I(Module):
                     imm = Module.twos_to_int(binary[0] + binary[24] + binary[1:7] + binary[20:24] + '0')
                     return True, (args1[-1][funct3], rs1, rs2, imm)
                 case 'U':
-                    return True, (args1[0], rd, (Module.twos_to_int(binary[:20]) << 12))
+                    return True, (args1[0], rd, Module.twos_to_int(binary[:20]))
                 case 'J':
                     imm = Module.twos_to_int(binary[0] + binary[12:20] + binary[11] + binary[1:11] + '0')
                     return True, (args1[0], rd, imm)
+                case 'SYS':
+                    assert args1[-2] == [19, 7]
+                    assert rd == 0 and rs1 == 0 and funct3 == 0
+                    args1 = args1[-1][0]
+                    assert args1[-2] == [31, 20]
+                    imm = int(binary[0:12])
+                    return True, (args1[-1][imm],)
                 case _:
                     return False, None
         except KeyError:
@@ -85,6 +92,8 @@ class RV32I(Module):
                 return True, RV32I.assemble_U(opcode, instr[1], int(instr[2]))
             case 'J':
                 return True, RV32I.assemble_J(opcode, instr[1], int(instr[2]))
+            case 'SYS':
+                return True, RV32I.assemble_32(opcode, flags=args)
             case _:
                 return False, None
 
