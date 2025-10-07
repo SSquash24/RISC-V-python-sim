@@ -2,6 +2,7 @@ import pytest
 from modules.Float import Float
 from riscv import RISCV # used for clean_instr command
 from modules.RV32I import RV32I
+from tests.test_commons import *
 
 tests = [
     ('fadd.s f22, f12, f2, RNE', '00000000001001100000101101010011'),
@@ -38,34 +39,18 @@ pseudos = [
 
 # sim = Float({'mem_size': 16, 'modules':[Float.__name__], 'pc': 0, 'mem': [], 'debug': True, 'status': 'RUNNING'})
 cleaner = RISCV(modules=[Float, RV32I], mem_size=16, code=[], debug=True)
-sim = cleaner.modules['Float']
+mod = cleaner.modules['Float']
 
 @pytest.mark.parametrize('instr, binary', tests)
 
 def test_assemble(instr, binary):
-    success, bits = sim.assemble(*cleaner.clean_instr(instr))
-    assert success
-    assert bits == binary
+    tcom_assemble(cleaner, mod, instr, binary)
 
 @pytest.mark.parametrize('instr, binary', tests)
 
 
 def test_unassemble(instr, binary):
-    success, packed = sim.unassemble(binary)
-    assert success
-    instr = instr.replace(',', '').split()
-
-    def clean(x: str):
-        try:
-            return int(x)
-        except ValueError:
-            if x[0] in ['x', 'f'] and x[1:].isdigit():
-                return sim.reg(x)
-            else:
-                return x
-
-    instr = tuple(clean(i) for i in instr)
-    assert packed == instr
+    tcom_unassemble(mod, instr, binary)
 
 @pytest.mark.parametrize('pseudo, translated', pseudos)
 def test_pseudos(pseudo, translated):

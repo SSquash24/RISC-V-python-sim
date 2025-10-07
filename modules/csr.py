@@ -24,15 +24,19 @@ class CSR(Module):
             opcode, instr_type, *args = CSR.inv_opcodes[instr[0]]
         except KeyError:
             return False, None
-        return True, self.assemble_I(opcode, self.reg(instr[1]), args[0], self.reg(instr[2]), int(instr[3]))
+        assert instr_type == 'I'
+        if instr[0][-1] == 'i':
+            return True, self.assemble_I(opcode, self.reg(instr[1]), int(instr[2]), int(instr[3]), args[0])
+        else:
+            return True, self.assemble_I(opcode, self.reg(instr[1]), self.reg(instr[2]), int(instr[3]), args[0])
 
     def unassemble(self, binary):
         opcode, rd, rs1, _, funct3, _ = super()._decompile_commons(binary)
         try:
-            _, _, table = CSR.opcodes[opcode]
+            _, _, _, table = CSR.opcodes[opcode]
             imm = self.twos_to_int(binary[0:12])
             return True, (table[funct3], rd, rs1, imm)
-        except KeyError:
+        except (KeyError, ValueError):
             return False, None
 
     def run_instr(self, instr):

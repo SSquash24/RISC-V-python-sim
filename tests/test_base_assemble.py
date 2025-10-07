@@ -1,6 +1,7 @@
 import pytest
 from modules.RV32I import RV32I
 from riscv import RISCV # used for clean_instr() command
+from tests.test_commons import *
 
 tests = [
     #OP
@@ -52,34 +53,15 @@ tests = [
     ('ebreak', '00000000000100000000000001110011')
 ]
 
-class TestAssembler:
+cleaner = RISCV(modules=[RV32I], mem_size=16, code=[], debug=True)
+mod = cleaner.modules['RV32I']
 
-    cleaner = RISCV(modules=[RV32I], mem_size=16, code=[], debug=True)
-    sim = cleaner.modules['RV32I']
-    # sim = RV32I({'mem_size': 16, 'modules':[RV32I.__name__], 'pc': 0, 'mem': [], 'debug': True, 'status': 'RUNNING'})
+@pytest.mark.parametrize('instr, binary', tests)
 
-    @pytest.mark.parametrize('instr, binary', tests)
+def test_assemble(instr, binary):
+    tcom_assemble(cleaner, mod, instr, binary)
 
-    def test_assemble(self, instr, binary):
-        success, bits = self.sim.assemble(*self.cleaner.clean_instr(instr))
-        assert success
-        assert bits == binary
+@pytest.mark.parametrize('instr, binary', tests)
 
-    @pytest.mark.parametrize('instr, binary', tests)
-
-    def test_unassemble(self, instr, binary):
-        success, packed = self.sim.unassemble(binary)
-        assert success
-        instr = instr.replace(',', '').split()
-
-        def clean(x: str):
-            try:
-                return int(x)
-            except ValueError:
-                if x[0] == 'x' and x[1:].isdigit():
-                    return self.sim.reg(x)
-                else:
-                    return x
-
-        instr = tuple(clean(i) for i in instr)
-        assert packed == instr
+def test_unassemble(instr, binary):
+    tcom_unassemble(mod, instr, binary)
