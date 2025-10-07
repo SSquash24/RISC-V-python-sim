@@ -260,7 +260,7 @@ sNaN.mantissa = 5 << 21
 
 class Float(Module):
 
-    opcodes, inv_opcodes, csrs = read_yaml('float.yaml', ret_CSR=True)
+    opcodes, inv_opcodes, csrs, pseudos = read_yaml('float.yaml', ret_CSR=True, ret_Pseudos=True)
 
     def _cur_rm(self):
         return rm[(self.fcsr & 224) >> 5]
@@ -305,6 +305,7 @@ class Float(Module):
 
         state['fregs'] = [RV_Float() for _ in range(32)]
         state['FLEN'] = 32
+        state['pseudos'] |= self.pseudos
 
         self.fcsr = 0
         if 'CSR' in state['modules']:

@@ -1,3 +1,7 @@
+'pseudos':
+  'frcsr': ['csrrs', 'INP:1', 'x0', '3']
+  'fscsr': ['csrrw', 'x0', 'INP:1', '3']
+
 'csr':
   'fcsr': 0x0003
   'fflags': 0x0001

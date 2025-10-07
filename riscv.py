@@ -11,7 +11,7 @@ class RISCV:
 
 
     def __init__(self, modules, mem_size, code, debug=False):
-        self.state = {'mem_size': mem_size, 'modules':[m.__name__ for m in modules], 'pc': 0, 'mem': [], 'debug': debug, 'status': 'RUNNING'}
+        self.state = {'mem_size': mem_size, 'modules':[m.__name__ for m in modules], 'pc': 0, 'mem': [], 'debug': debug, 'status': 'RUNNING', 'pseudos': {}}
         self.unassembled_code = code
         self.modules = {}
         modules.sort(key=lambda m: m.order)
@@ -49,9 +49,18 @@ class RISCV:
         for m in self.modules.values():
             m.reset_module()
 
-    @staticmethod
-    def clean_instr(line):
-        return line.strip().replace(',', '').split('#', 1)[0].split()
+    def clean_instr(self, line):
+        instr = line.strip().replace(',', '').split('#', 1)[0].split()
+        if instr == []:
+            return []
+        if instr[0] in self.state['pseudos'].keys():
+            args = instr[1:]
+            instr = self.state['pseudos'][instr[0]]
+            for i, arg in enumerate(instr):
+                if arg.split(':')[0] == 'INP':
+                    index = int(arg.split(':')[1])-1
+                    instr[i] = args[index]
+        return instr
 
     def assemble(self, instr, *args):
         for m in self.modules.values():

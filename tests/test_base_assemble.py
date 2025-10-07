@@ -54,12 +54,14 @@ tests = [
 
 class TestAssembler:
 
-    sim = RV32I({'mem_size': 16, 'modules':[RV32I.__name__], 'pc': 0, 'mem': [], 'debug': True, 'status': 'RUNNING'})
+    cleaner = RISCV(modules=[RV32I], mem_size=16, code=[], debug=True)
+    sim = cleaner.modules['RV32I']
+    # sim = RV32I({'mem_size': 16, 'modules':[RV32I.__name__], 'pc': 0, 'mem': [], 'debug': True, 'status': 'RUNNING'})
 
     @pytest.mark.parametrize('instr, binary', tests)
 
     def test_assemble(self, instr, binary):
-        success, bits = self.sim.assemble(*RISCV.clean_instr(instr))
+        success, bits = self.sim.assemble(*self.cleaner.clean_instr(instr))
         assert success
         assert bits == binary
 
