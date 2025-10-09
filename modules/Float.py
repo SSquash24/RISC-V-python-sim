@@ -80,6 +80,7 @@ class RV_Float:
     def set_rm(self, rm):
         self.rm = rm
 
+
     @staticmethod
     def round(val, cutoff, sign, rm='RNE'):
         if '1' not in cutoff:
@@ -262,8 +263,14 @@ class Float(Module):
 
     opcodes, inv_opcodes, csrs, pseudos = read_yaml('float.yaml', ret_CSR=True, ret_Pseudos=True)
 
-    def _cur_rm(self):
-        return rm[(self.fcsr & 224) >> 5]
+    def _cur_rm(self, instr_rm=None):
+        if instr_rm is None or instr_rm == 'DYN':
+            print(self.fcsr)
+            print(self.fcsr & 224)
+            print((self.fcsr & 224) >> 5)
+            return rm[(self.fcsr & 224) >> 5]
+        else:
+            return instr_rm
     def _cur_NV(self):
         return self.fcsr & 16 != 0
     def _cur_DZ(self):
@@ -293,10 +300,7 @@ class Float(Module):
 
     def _read_freg(self, freg: int, rm=None) -> RV_Float:
         assert(0 <= freg < self.state['FLEN'])
-        if rm is None:
-            self.state['fregs'][freg].rm = self._cur_rm()
-        else:
-            self.state['fregs'][freg].rm = rm
+        self.state['fregs'][freg].rm = self._cur_rm(rm)
         return self.state['fregs'][freg]
 
 
@@ -317,6 +321,7 @@ class Float(Module):
 
             state['csrs'][Float.csrs['ffrm']] = (lambda _: (self.fcsr // 32) % 8,
                                             lambda x: setattr(self, 'fcsr', (self.fcsr // 256)*256 + x*32 + (self.fcsr % 32)))
+            print(state['csrs'])
 
             if state['debug']:
                 print("Using module Float, which has detected module CSR.")

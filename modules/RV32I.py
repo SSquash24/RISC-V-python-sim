@@ -66,7 +66,7 @@ class RV32I(Module):
                     return True, (args1[-1][imm],)
                 case _:
                     return False, None
-        except KeyError:
+        except (KeyError, AssertionError):
             pass
         return False, None
 

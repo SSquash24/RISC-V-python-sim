@@ -22,7 +22,7 @@ class RVError(Exception):
 
 class Module:
 
-    order = 1
+    order = 10
 
     def __init__(self, state):
         self.state = state

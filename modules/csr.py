@@ -4,6 +4,7 @@ from yamls.read_yaml import read_yaml
 class CSR(Module):
 
     opcodes, inv_opcodes = read_yaml('csr.yaml')
+    order = 1
 
     """ Set csr with side effects"""
     def set_csr(self, a, val):

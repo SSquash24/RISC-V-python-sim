@@ -38,7 +38,7 @@ def read_yaml(filename : str, ret_CSR = False, ret_Pseudos = False):
         if 'csr' in data.keys():
             csrs = data['csr']
             # change values from int to 32bits
-            csrs = {k : bin(v)[2:].rjust(32, '0') for k, v in csrs.items()}
+            csrs = {k : bin(v)[2:].rjust(12, '0') for k, v in csrs.items()}
 
         pseudos = {}
         if 'pseudos' in data.keys():

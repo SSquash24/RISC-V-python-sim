@@ -51,11 +51,11 @@ class RISCV:
 
     def clean_instr(self, line):
         instr = line.strip().replace(',', '').split('#', 1)[0].split()
-        if instr == []:
+        if not instr:
             return []
         if instr[0] in self.state['pseudos'].keys():
             args = instr[1:]
-            instr = self.state['pseudos'][instr[0]]
+            instr = self.state['pseudos'][instr[0]].copy()
             for i, arg in enumerate(instr):
                 if arg.split(':')[0] == 'INP':
                     index = int(arg.split(':')[1])-1

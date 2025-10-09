@@ -54,4 +54,5 @@ def test_unassemble(instr, binary):
 
 @pytest.mark.parametrize('pseudo, translated', pseudos)
 def test_pseudos(pseudo, translated):
+    print(cleaner.state['pseudos'])
     assert cleaner.clean_instr(pseudo) == translated

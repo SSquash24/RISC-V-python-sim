@@ -1,3 +1,5 @@
+MODULES: Float RV32I CSR
+MEM: 16
 # test fscsr, frcsr
 
 jal x0, 8
@@ -12,3 +14,9 @@ flw f1, x0, 4
 fcvt.w.s x3, f1, DYN
 
 ebreak
+
+RESULTS---
+x1=96
+x2=96
+x3=5
+f1=4.25
