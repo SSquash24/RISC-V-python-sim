@@ -19,6 +19,7 @@ class CSR(Module):
         super().__init__(state)
         state['csrs'] = {}  # csr is of form addr [bits] : (read_func (Bool = True -> int), write_func (int -> None))
         state['set_csr'] = lambda a, x: self.set_csr(a, x) # access to set_csr func for other modules
+        state['csr_dict'] = {} # dict from csr name to address, mostly for interface purposes
 
     def assemble(self, *instr):
         try:

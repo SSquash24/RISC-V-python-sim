@@ -321,7 +321,7 @@ class Float(Module):
 
             state['csrs'][Float.csrs['ffrm']] = (lambda _: (self.fcsr // 32) % 8,
                                             lambda x: setattr(self, 'fcsr', (self.fcsr // 256)*256 + x*32 + (self.fcsr % 32)))
-            print(state['csrs'])
+            state['csr_dict'].update(self.csrs)
 
             if state['debug']:
                 print("Using module Float, which has detected module CSR.")
@@ -570,6 +570,7 @@ class Float(Module):
 
     def reset_module(self):
         self.state['fregs'] = [RV_Float() for _ in range(32)]
+        self.fcsr = 0
 
 
 

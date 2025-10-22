@@ -42,13 +42,10 @@ cleaner = RISCV(modules=[Float, RV32I], mem_size=16, code=[], debug=True)
 mod = cleaner.modules['Float']
 
 @pytest.mark.parametrize('instr, binary', tests)
-
 def test_assemble(instr, binary):
     tcom_assemble(cleaner, mod, instr, binary)
 
 @pytest.mark.parametrize('instr, binary', tests)
-
-
 def test_unassemble(instr, binary):
     tcom_unassemble(mod, instr, binary)
 

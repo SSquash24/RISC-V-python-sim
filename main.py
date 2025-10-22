@@ -15,6 +15,7 @@ from modules.RISC_modules import RVError, AssemblerError
 from modules.RV32I import RV32I
 from modules.csr import CSR
 from modules.Float import Float
+from modules.vector import Vector
 
 def file_prompt():
     return fd.askopenfilename(title="Select code file")
@@ -98,8 +99,22 @@ class DisplaySim:
         else:
             self.freglist = None
 
+        if Vector in modules:
+            self.vreglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, font='TkFixedFont')
+            self.vreglist.grid(column=1, row=2, columnspan=2)
+        else:
+            self.vreglist = None
 
-        regFrame.grid(column=0, row=0, rowspan=2)
+        regFrame.grid(column=0, row=0, rowspan=3)
+
+        if CSR in modules:
+            csrFrame = ttk.LabelFrame(self.root, text="CSR")
+            self.csrList = tk.Listbox(csrFrame, selectmode=tk.BROWSE, height=16, width=32, font='TkFixedFont')
+            self.csrList.pack()
+            csrFrame.grid(row=2,column=2, columnspan=2)
+        else:
+            self.csrList = None
+
 
         self.mem_addr_var.set('0')
         self.update_vars()
@@ -140,12 +155,23 @@ class DisplaySim:
 
         self.reglist.delete(0, tk.END)
         for i, reg in enumerate(self.sim.state['regs']):
-            self.reglist.insert(tk.END, f"{'x'+str(i):>3}: {reg:0{2*self.sim.state['word_size']}x} = {reg}")
+            self.reglist.insert(tk.END, f"x{str(i):<3}: {reg:0{2*self.sim.state['word_size']}x} = {reg}")
 
         if self.freglist is not None:
             self.freglist.delete(0, tk.END)
             for i, reg in enumerate(self.sim.state['fregs']):
-                self.freglist.insert(tk.END, f"{'f'+str(i):>3}: {'%08X' % int(reg.bits(), 2)} = {reg.value()}")
+                self.freglist.insert(tk.END, f"f{str(i):<3}: {'%08X' % int(reg.bits(), 2)} = {reg.value()}")
+
+        if self.vreglist is not None:
+            self.vreglist.delete(0, tk.END)
+            for i, reg in enumerate(self.sim.state['vregs']):
+                self.vreglist.insert(tk.END, f"v{str(i):<3}: {hex(int(reg, 2))[2:].rjust(self.sim.modules['Vector'].vlen//8, '0')}")
+
+        if self.csrList is not None:
+            self.csrList.delete(0, tk.END)
+            inv_csr = {v: k for k, v in self.sim.state['csr_dict'].items()}
+            for i, csr in self.sim.state['csrs'].items():
+                self.csrList.insert(tk.END, f"{i} ({inv_csr[i].ljust(6)}): {csr[0](False)}") #csr[0](False) means read without side effects
 
         # next instr
         try:
@@ -174,7 +200,8 @@ if __name__ == '__main__':
         modules.append(CSR)
     if '-f' in sys.argv:
         modules.append(Float)
-
+    if '-v' in sys.argv:
+        modules.append(Vector)
     try:
         code = open(filename, 'r').read().split('\n')
     except FileNotFoundError | PermissionError as e:
