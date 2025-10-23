@@ -49,6 +49,8 @@ def read_yaml(filename : str, ret_CSR = False, ret_Pseudos = False):
 
     def rec_search(tree, pre, dic):
         if type(tree) == list:
+            if len(tree) == 3:
+                pre = [pre[0],tree[0]]
             for key, val in tree[-1].items():
                 new_dict = dict(dic)
                 new_dict[tuple(tree[-2])] = key

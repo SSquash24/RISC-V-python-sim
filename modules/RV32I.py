@@ -7,7 +7,7 @@ Implements base RV32I as a Module (as defined in RISC_modules.py)
 from modules.RISC_modules import *
 
 class RV32I(Module):
-    opcodes, inv_opcodes = read_yaml('rv32i.yaml')
+    opcodes, inv_opcodes, pseudos = read_yaml('rv32i.yaml', ret_Pseudos=True)
     order = 0
 
     def __init__(self, state):
@@ -15,6 +15,7 @@ class RV32I(Module):
         state['regs'] = [0 for _ in range(32)]
         state['word_size'] = 4
         state['reg_count'] = 32
+        state['pseudos'] |= self.pseudos
 
     # Module implementations
     def unassemble(self, binary):

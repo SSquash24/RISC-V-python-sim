@@ -1,5 +1,9 @@
 ---
 
+'pseudos':
+  'bnez': ['bne', 'x0', 'INP:1', 'INP:2']
+  'mv': ['addi', 'INP:1', 'INP:2', '0']
+
 base_instr_types:
   - R
   - S

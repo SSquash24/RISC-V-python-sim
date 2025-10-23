@@ -52,7 +52,7 @@ class Module:
         Run a single instruction of this module
         :param instr: instructions in assembly list form
         """
-        pass
+        raise RVError(f"run_instr for module '{self.__class__.__name__}' is not implemented")
 
     @abstractmethod
     def reset_module(self):
@@ -68,7 +68,7 @@ class Module:
         if type(x) is int:
             val = x
         else:
-            assert x[0] in ['x', 'f']
+            assert x[0] in ['x', 'f', 'v']
             val = int(x[1:])
         if not 0 <= val <= 31:
             raise AssemblerError(f"Invalid reg value: {x}")

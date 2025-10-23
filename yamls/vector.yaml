@@ -10,23 +10,129 @@
 'opcode':
   0b0000111:
     - "LOAD-FP"
-    - 'I'
-    - [14, 12]
+    - 'M2'
+    - [28, 28]
     - 0:
-        - [27, 26]
-        - 0: 'vl32.v'
-          1: 'vls32.v'
-          2: 'vlx32.v'
+      - [14, 12]
+      - 0:
+          - [27, 26]
+          - 0:
+              - 'M1'
+              - [24, 20]
+              - 0:
+                  - [31, 29]
+                  - 0: 'vle32.v'
+                    1: 'vlseg2e32.v'
+                    2: 'vlseg3e32.v'
+                    3: 'vlseg4e32.v'
+                    4: 'vlseg5e32.v'
+                    5: 'vlseg6e32.v'
+                    6: 'vlseg7e32.v'
+                    7: 'vlseg8e32.v'
+                0x10:
+                  - [31, 29]
+                  - 0: 'vle32ff.v'
+                    1: 'vlseg2e32ff.v'
+                    2: 'vlseg3e32ff.v'
+                    3: 'vlseg4e32ff.v'
+                    4: 'vlseg5e32ff.v'
+                    5: 'vlseg6e32ff.v'
+                    6: 'vlseg7e32ff.v'
+                    7: 'vlseg8e32ff.v'
+                0x08:
+                  - [31,29]
+                  - 0: 'vl1re32.v'
+                    1: 'vl2re32.v'
+                    3: 'vl4re32.v'
+                    7: 'vl8re32.v'
+            1:
+              - [31, 29]
+              - 0: 'vluxei32.v'
+                1: 'vluxseg2ei32.v'
+                2: 'vluxseg3ei32.v'
+                3: 'vluxseg4ei32.v'
+                4: 'vluxseg5ei32.v'
+                5: 'vluxseg6ei32.v'
+                6: 'vluxseg7ei32.v'
+                7: 'vluxseg8ei32.v'
+            2:
+              - [31,29]
+              - 0: 'vlse32.v'
+                1: 'vlsseg2e32.v'
+                2: 'vlsseg3e32.v'
+                3: 'vlsseg4e32.v'
+                4: 'vlsseg5e32.v'
+                5: 'vlsseg6e32.v'
+                6: 'vlsseg7e32.v'
+                7: 'vlsseg8e32.v'
+            3:
+              - [31,29]
+              - 0: 'vloxei32.v'
+                1: 'vloxseg2ei32.v'
+                2: 'vloxseg3ei32.v'
+                3: 'vloxseg4ei32.v'
+                4: 'vloxseg5ei32.v'
+                5: 'vloxseg6ei32.v'
+                6: 'vloxseg7ei32.v'
+                7: 'vloxseg8ei32.v'
 
   0b0100111:
     - "STORE-FP"
-    - "S"
-    - [14, 12]
+    - "M2"
+    - [28,28]
     - 0:
-        - [27, 26]
-        - 0: 'vs32.v'
-          1: 'vss32.v'
-          2: 'vsx32.v'
+      - [14, 12]
+      - 0:
+          - [27, 26]
+          - 0:
+              - 'M1'
+              - [24, 20]
+              - 0:
+                  - [31, 29]
+                  - 0: 'vse32.v'
+                    1: 'vsseg2e32.v'
+                    2: 'vsseg3e32.v'
+                    3: 'vsseg4e32.v'
+                    4: 'vsseg5e32.v'
+                    5: 'vsseg6e32.v'
+                    6: 'vsseg7e32.v'
+                    7: 'vsseg8e32.v'
+                0x08:
+                  - [31, 29]
+                  - 0: 'vs1r.v'
+                    1: 'vs2r.v'
+                    3: 'vs4r.v'
+                    7: 'vs8r.v'
+            1:
+              - [24, 20]
+              - 0: 'vsuxei32.v'
+                1: 'vsuxseg2ei32.v'
+                2: 'vsuxseg3ei32.v'
+                3: 'vsuxseg4ei32.v'
+                4: 'vsuxseg5ei32.v'
+                5: 'vsuxseg6ei32.v'
+                6: 'vsuxseg7ei32.v'
+                7: 'vsuxseg8ei32.v'
+            2:
+              - [24, 20]
+              - 0: 'vsse32.v'
+                1: 'vssseg2e32.v'
+                2: 'vssseg3e32.v'
+                3: 'vssseg4e32.v'
+                4: 'vssseg5e32.v'
+                5: 'vssseg6e32.v'
+                6: 'vssseg7e32.v'
+                7: 'vssseg8e32.v'
+            3:
+              - [24, 20]
+              - 0: 'vsoxei32.v'
+                1: 'vsoxseg2ei32.v'
+                2: 'vsoxseg3ei32.v'
+                3: 'vsoxseg4ei32.v'
+                4: 'vsoxseg5ei32.v'
+                5: 'vsoxseg6ei32.v'
+                6: 'vsoxseg7ei32.v'
+                7: 'vsoxseg8ei32.v'
 
   0b1010111:
     - "OP-V"
@@ -51,7 +157,14 @@
           0b010001: 'vmadc.vv'
           0b010010: 'vsbc.vv'
           0b010011: 'vmsbc.vv'
-          0b010111: 'vmerge/vmv.vv'
+          0b010111:
+            - '2'
+            - [25, 25]
+            - 0: 'vmerge.vvm'
+              1:
+                - '1'
+                - [24,20]
+                - 0: 'vmv.v.v'
           0b011000: 'vmseq.vv'
           0b011001: 'vmsne.vv'
           0b011010: 'vmsltu.vv'
@@ -121,21 +234,44 @@
       0b010:
         - 'OPMVV'
         - [31, 26] # funct6
-        - 0b000000: 'vredsum.vv'
-          0b000001: 'vredand.vv'
-          0b000010: 'vredor.vv'
-          0b000011: 'vredxor.vv'
-          0b000100: 'vredminu.vv'
-          0b000101: 'vredmin.vv'
-          0b000110: 'vredmaxu.vv'
-          0b000111: 'vredmax.vv'
+        - 0b000000: 'vredsum.vs'
+          0b000001: 'vredand.vs'
+          0b000010: 'vredor.vs'
+          0b000011: 'vredxor.vs'
+          0b000100: 'vredminu.vs'
+          0b000101: 'vredmin.vs'
+          0b000110: 'vredmaxu.vs'
+          0b000111: 'vredmax.vs'
           0b001000: 'vaaddu.vv'
           0b001001: 'vaadd.vv'
           0b001010: 'vasubu.vv'
           0b001011: 'vasub.vv'
-          0b010000: 'vwxunary0.vv'
-          0b010010: 'vxunary0.vv'
-          0b010100: 'vmunary0.vv'
+          0b010000:
+            - 'VMVR'
+            - [25,25]
+            - 0:
+                - [19,15]
+                - 0: 'vmv.x.s'
+          0b010010:
+            - 'VZEXT'
+            - [19,15]
+            - 2: 'vzext.vf8'
+              3: 'vsext.vf8'
+              4: 'vzext.vf4'
+              5: 'vsext.vf4'
+              6: 'vzext.vf2'
+              7: 'vsext.vf2'
+          0b010100:
+            - 'VZEXT'
+            - [19,15]
+            - 0x01: 'vmsbf.m'
+              0x02: 'vmsof.m'
+              0x03: 'vmsif.m'
+              0x10: 'viota.m'
+              0x11:
+                - 'M'
+                - [24,20]
+                - 0: 'vid.v'
           0b010111: 'vcompress.vv'
           0b011000: 'vmandn.vv'
           0b011001: 'vmand.vv'
@@ -183,7 +319,14 @@
           0b001110: 'vslideup.vi'
           0b001111: 'vslidedown.vi'
           0b010000: 'vadc.vi'
-          0b010111: 'vmerge/vmv.vi'
+          0b010111:
+            - '2'
+            - [25,25]
+            - 0: 'vmerge.vim'
+              1:
+                - '1'
+                - [24,20]
+                - 0: 'vmv.v.i'
           0b011000: 'vmseq.vi'
           0b011001: 'vmsne.vi'
           0b011100: 'vmsleu.vi'
@@ -192,7 +335,15 @@
           0b011111: 'vmsgt.vi'
           0b100000: 'vsaddu.vi'
           0b100001: 'vsadd.vi'
-          0b100111: 'vmv<nr>r.vi'
+          0b100111:
+            - 'VMVR'
+            - [25,25]
+            - 1:
+              - [19,15]
+              - 0: 'vmv1r.v'
+                1: 'vmv2r.v'
+                3: 'vmv4r.v'
+                7: 'vmv8r.v'
           0b101000: 'vsrl.vi'
           0b101001: 'vsra.vi'
           0b101010: 'vssrl.vi'
@@ -223,7 +374,14 @@
           0b010001: 'vmadc.vx'
           0b010010: 'vsbc.vx'
           0b010011: 'vmsbc.vx'
-          0b010111: 'vmerge/vmv.vx'
+          0b010111:
+            - '2'
+            - [25,25]
+            - 0: 'vmerge.vxm'
+              1:
+                - '1'
+                - [24, 20]
+                - 0: 'vmv.v.x'
           0b011000: 'vmseq.vx'
           0b011001: 'vmsne.vx'
           0b011010: 'vmsltu.vx'
@@ -261,9 +419,12 @@
           0b001111: 'vfslide1down.vf'
           0b010000: 'vrfunary0.vf'
           0b010111:
-            - [] # figure out
-            - OP1: 'vfmerge'
-              OP2: 'vfmv'
+            - 'M1'
+            - [25, 25] # figure out
+            - 0: 'vfmerge.vfm'
+              1:
+                - [24, 20]
+                - 0: 'vfmv.v.f'
           0b11000: 'vmfeq.vf'
           0b011001: 'vmfle.vf'
           0b011011: 'vmflt.vf'
@@ -333,7 +494,7 @@
           1:
             - [30, 30]
             - 0:
+                - 'M2'
                 - [29, 25]
-                - 0:
-                    vsetvl
+                - 0: 'vsetvl'
               1: 'vsetivli'

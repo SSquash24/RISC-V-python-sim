@@ -74,7 +74,7 @@ class RISCV:
             else:
                 self.code.append(self.assemble(*line)[0])
 
-        self.state['mem'] = self.code + ['0' * 8 * self.state['word_size']] * (self.state['mem_size'] - len(self.code))
+        self.state['mem'] = self.code + ['\0' * 8 * self.state['word_size']] * (self.state['mem_size'] - len(self.code))
 
     def reset(self):
         if self.state['debug']:
@@ -90,7 +90,6 @@ class RISCV:
         for key, value in reg_pseudos.items():
             instr = instr.replace(key, value)
         instr = instr.split()
-        print(instr)
         if not instr:
             return []
         if instr[0] in self.state['pseudos'].keys():
