@@ -153,7 +153,7 @@
           0b001011: 'vxor.vv'
           0b001100: 'vrgather.vv'
           0b001110: 'vrgatherei16.vv'
-          0b010000: 'vadc.vv'
+          0b010000: 'vadc.vvm'
           0b010001: 'vmadc.vv'
           0b010010: 'vsbc.vv'
           0b010011: 'vmsbc.vv'

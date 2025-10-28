@@ -16,40 +16,64 @@ class Vector(Module):
 
     opcodes, inv_opcodes, csrs = read_yaml('vector.yaml', ret_CSR=True)
 
-    def _read_vgroup(self, reg, type=int):
+    def _read_vgroup(self, reg, sew=None, lmul=None, type=None):
         """
         Returns list of elements from vector group selected as reg
         """
-        bits = ''.join(self.state['vregs'][reg:ceil(reg+self.lmul)])
-        if self.lmul < 1:
-            bits = bits[:32//self.lmul]
-        split_bits = [bits[i:i+self.sew] for i in range(0, len(bits), self.sew)]
-        if type is int:
-            return [self.twos_to_int(i) for i in split_bits]
-        elif type is RV_Float:
-            return [RV_Float.from_bits(i) for i in split_bits]
-        else:
-            raise RVError(f"Unknown type to read vector group: {type}")
+        if sew is None:
+            sew = self.sew
+        if lmul is None:
+            lmul = self.lmul
+        bits = ''.join(self.state['vregs'][reg:ceil(reg+lmul)])
+        if lmul < 1:
+            bits = bits[:int(lmul*self.vlen)]
+        split_bits = [bits[i:i+sew] for i in range(0, len(bits), sew)]
+        match type:
+            case 'int':
+                res = [self.twos_to_int(i) for i in split_bits]
+            case 'unsigned':
+                res = [int(i, 2) for i in split_bits]
+            case _:
+                res = split_bits
+        return res
 
-    def _write_vgroup(self, reg, values, type=int):
-        if type is int:
-            values = [self.twos_comp_bin(i) for i in values]
-        elif type is RV_Float:
-            values = [i.bits() for i in values]
-        else:
-            raise RVError(f"Unknown type to store vector group: {type}")
-        if self.lmul < 1:
+    def _write_vgroup(self, reg, values, mask=None, sew=None, lmul=None, type=None):
+        # TODO mask
+
+        match type:
+            case 'int':
+                values = [self.twos_comp_bin(i, self.sew) for i in values]
+            case 'unsigned':
+                values = [bin(i)[2:].rjust(self.sew, '0') for i in values]
+
+        if sew is None:
+            sew = self.sew
+        if lmul is None:
+            lmul = self.lmul
+
+        if lmul < 1:
             bits = ''.join(values)
             if self.ta:
                 self.state['vregs'][reg] = bits.rjust(self.vlen, '1')
             else:
                 self.state['vregs'][reg] = bits + self.state['vregs'][reg][len(bits):]
         else:
-            jump = self.vlen // self.sew
+            jump = self.vlen // sew
             for i in range(self.lmul):
                 self.state['vregs'][reg+i] = ''.join(values[i*jump:(i+1)*jump])
 
+    def vbits_to_int(self, bits):
+        return [self.twos_to_int(i) for i in bits]
 
+    def vint_to_bits(self, lst):
+        return [self.twos_comp_bin(i, self.sew) for i in lst]
+
+    def vbits_to_float(self, bits):
+        assert all([len(i) == 32 for i in bits])
+        return [RV_Float.from_bits(i) for i in bits]
+
+    def vfloat_to_bits(self, lst):
+        return [i.bits() for i in lst]
 
     def __init__(self, state, vlen=128, vtype=None):
         super().__init__(state)
@@ -60,6 +84,7 @@ class Vector(Module):
         self.vlen = vlen
         self.lmul = 1
         self.sew = 32
+        self.vl = vlen // self.sew
         self.ta = True
         self.ma = True
         if 'CSR' in state['modules']:
@@ -83,6 +108,9 @@ class Vector(Module):
         ta = '1' if 'ta' in args else '0'
         ma = '1' if 'ma' in args else '0'
         return (ma + ta + lmul + sew).rjust(len, '0')
+
+    def _get_mask(self, instr):
+        return self.state['vreg'][0] if instr[-1] == 'v0.t' else None
 
     def assemble(self, *instr):
         try:
@@ -199,3 +227,176 @@ class Vector(Module):
                         return False, None
             case _:
                 return False, None
+
+    def store(self, binary, addr):
+        """Stores arbitrary length binary string at mem addr(bites)"""
+        addr, mod = divmod(addr, 4)
+        mod *= 8
+        len1 = 32 - mod
+        data = self.state['mem'][addr]
+        if len(binary) <= len1:
+            self.state['mem'][addr] = data[:mod] + binary + data[mod+len(binary):]
+        else:
+            self.state['mem'][addr] = data[:mod] + binary[:len1]
+            binary = binary[len1:]
+            addr += 4
+            while len(binary) >= 32:
+                self.state['mem'][addr] = binary[:32]
+                binary = binary[32:]
+                addr += 4
+            if len(binary) != 0:
+                self.state['mem'][addr] = binary + self.state['mem'][addr][len(binary):]
+
+
+    def map(self, vd, vs1, vs2, func, data_type, vm):
+        data1 = self._read_vgroup(vs1, type=data_type)
+        data2 = self._read_vgroup(vs2, type=data_type)
+        data = [func(data1[i], data2[i]) for i in range(len(data1))]
+        self._write_vgroup(vd, data, type=data_type, mask=vm)
+
+    def run_instr(self, instr):
+        match instr[0]:
+            # TODO use vstart on loads and stores
+            case 'vle32.v' | 'vlseg2e32.v' | 'vlseg3e32.v' | 'vlseg4e32.v' | 'vlseg5e32.v' | 'vlseg6e32.v' | 'vlseg7e32.v' | 'vlseg8e32.v':
+                eew = 32
+                emul = (eew / self.sew) * self.lmul
+                num_groups = 1 if instr[0] == 'vle32.v' else int(instr[0][5])
+                addr = self._read_reg(instr[2], signed=False)
+
+                num_mem_reads = ceil((emul * self.vlen * num_groups) / 32)
+                data = ''.join([self.state['mem'][addr+(4*a)] for a in range(num_mem_reads)])
+                vect = [data[i:i+eew] for i in range(0, self.vlen * emul, eew)]
+
+                # split data
+                vect = [vect[i:i+num_groups] for i in range(0, len(vect), num_groups)]
+                for r, data in enumerate(vect):
+                    self._write_vgroup(instr[1]+(r*emul), data, self._get_mask(instr), lmul=emul, sew=eew)
+
+            # load FFs TODO
+
+            case 'vl1re32.v' | 'vl2re32.v' | 'vl4re32.v' | 'vl8re32.v':
+                eew = 32 # TODO: why is eew needed at all?
+                num_regs = int(instr[0][2])
+                addr = self._read_reg(instr[2], signed=False)
+                data = ''.join([self.state['mem'][addr+i] for i in range(0, ceil((self.vlen*num_regs)/(8*4)), 4)])
+                vect = [data[i:i+eew] for i in range(0, self.vlen*num_regs, eew)]
+                self._write_vgroup(instr[1], vect, self._get_mask(instr), lmul=num_regs, sew=eew)
+
+
+            case 'vluxei32.v' | 'vluxseg2ei32.v' | 'vluxseg3ei32.v' | 'vluxseg4ei32.v' | 'vluxseg5ei32.v' | 'vluxseg6ei32.v' | 'vluxseg7ei32.v' | 'vluxseg8ei32.v'\
+                | 'vloxei32.v' | 'vloxseg2ei32.v' | 'vloxseg3ei32.v' | 'vloxseg4ei32.v' | 'vloxseg5ei32.v' | 'vloxseg6ei32.v' | 'vloxseg7ei32.v' | 'vloxseg8ei32.v':
+                # for simplicity we will access both in order, so implementation is the same between vlux... and vlox...
+                # FOR NOW ONLY WORKS ON eew=32, TODO generalise
+                eew = 32
+                emul = (eew / self.sew) * self.lmul # eew, emul is used for index values
+                num_groups = 1 if instr[0] == 'vluxei32.v' else int(instr[0][7])
+                addr = self._read_reg(instr[2], signed=False)
+                offsets = self._read_vgroup(instr[3], sew=eew, lmul=emul, type='int')
+
+                vect = []
+                for i in offsets:
+                    loc = addr + i
+                    assert i % 4 == 0
+                    vect.append(self.state['mem'][loc])
+
+                vect = [vect[i:i + num_groups] for i in range(0, len(vect), num_groups)]
+                for r, data in enumerate(vect):
+                    self._write_vgroup(instr[1] + (r*self.lmul), data, self._get_mask(instr))
+
+            case 'vlse32.v' | 'vlsseg2e32.v' | 'vlsseg3e32.v' | 'vlsseg4e32.v' | 'vlsseg5e32.v' | 'vlsseg6e32.v' | 'vlsseg7e32.v' | 'vlsseg8e32.v':
+                eew = 32
+                emul = (eew / self.sew) * self.lmul
+                num_groups = 1 if instr[0] == 'vlse32.v' else int(instr[0][6])
+                stride = self._read_reg(instr[3])
+                assert stride % 4 == 0 # TODO check if need to change?
+                addr = self._read_reg(instr[2], signed=False)
+
+                vect = []
+                for i in range(int((emul*self.vlen*num_groups)/eew)):
+                    data = ''.join([self.state['mem'][addr+i] for i in range(0, eew//8, 4)])
+                    vect.append(data[:eew])
+                    addr += stride
+
+                # split data
+                vect = [vect[i:i + num_groups] for i in range(0, len(vect), num_groups)]
+                for r, data in enumerate(vect):
+                    self._write_vgroup(instr[1] + (r * emul), data, self._get_mask(instr), lmul=emul, sew=eew)
+
+
+            case 'vse32.v' | 'vsseg2e32.v' | 'vsseg3e32.v' | 'vsseg4e32.v' | 'vsseg5e32.v' | 'vsseg6e32.v' | 'vsseg7e32.v' | 'vsseg8e32.v':
+                eew = 32
+                emul = (eew / self.sew) * self.lmul
+                num_groups = 1 if instr[0] == 'vle32.v' else int(instr[0][5])
+                addr = self._read_reg(instr[2], signed=False)
+
+                data = [self._read_vgroup(instr[1]+i, lmul=emul, sew=eew) for i in range(num_groups)]
+                data = ''.join([data[i % num_groups][i//num_groups] for i in range(num_groups*len(data[0]))])
+                self.store(data, addr)
+
+            case 'vs1r.v' | 'vs2r.v' | 'vs4r.v' | 'vs8r.v':
+                num_regs = int(instr[0][2])
+                addr = self._read_reg(instr[2], signed=False)
+                data = ''.join(self._read_vgroup(instr[1], sew=32, lmul=num_regs))
+                self.store(data, addr)
+
+            case 'vsuxei32.v' | 'vsuxseg2ei32.v' | 'vsuxseg3ei32.v' | 'vsuxseg4ei32.v' | 'vsuxseg5ei32.v' | 'vsuxseg6ei32.v' | 'vsuxseg7ei32.v' | 'vsuxseg8ei32.v' \
+                'vsoxei32.v' | 'vsoxseg2ei32.v' | 'vsoxseg3ei32.v' | 'vsoxseg4ei32.v' | 'vsoxseg5ei32.v' | 'vsoxseg6ei32.v' | 'vsoxseg7ei32.v' | 'vsoxseg8ei32.v':
+                eew = 32
+                emul = (eew / self.sew) * self.lmul  # eew, emul is used for index values
+                num_groups = 1 if instr[0] == 'vluxei32.v' else int(instr[0][7])
+                addr = self._read_reg(instr[2], signed=False)
+                offsets = self._read_vgroup(instr[3], sew=eew, lmul=emul, type='int')
+
+                data = [self._read_vgroup(instr[1] + i, lmul=emul, sew=eew) for i in range(num_groups)]
+                for i in range(len(data[0])):
+                    for j in range(num_groups):
+                        self.store(data[j][i], addr+offsets[i])
+
+            case 'vsse32.v' | 'vsseg2e32.v' | 'vsseg3e32.v' | 'vsseg4e32.v' | 'vsseg5e32.v' | 'vsseg6e32.v' | 'vsseg7e32.v' | 'vsseg8e32.v':
+                eew = 32
+                emul = (eew / self.sew) * self.lmul  # eew, emul is used for index values
+                num_groups = 1 if instr[0] == 'vluxei32.v' else int(instr[0][7])
+                addr = self._read_reg(instr[2], signed=False)
+                stride = self._read_reg(instr[3])
+
+                data = [self._read_vgroup(instr[1] + i, lmul=emul, sew=eew) for i in range(num_groups)]
+                for i in range(len(data[0])):
+                    for j in range(num_groups):
+                        self.store(data[j][i], addr)
+                    addr += stride
+
+            case 'vadd.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i,j: i+j, 'int', self._get_mask(instr))
+
+            case 'vsub.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i - j, 'int', self._get_mask(instr))
+
+            case 'vminu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: min(i,j), 'unsigned', self._get_mask(instr))
+
+            case 'vmin.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: min(i, j), 'int', self._get_mask(instr))
+            case 'vmaxu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: max(i, j), 'unsigned', self._get_mask(instr))
+            case 'vmax.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: max(i, j), 'int', self._get_mask(instr))
+            case 'vand.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i & j, 'unsigned', self._get_mask(instr))
+            case 'vor.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i | j, 'unsigned', self._get_mask(instr))
+            case 'vxor.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i ^ j, 'unsigned', self._get_mask(instr))
+            case 'vrgather.vv':
+                vs2 = self._read_vgroup(instr[2])
+                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                data = [vs2[i] if i < self.vl else 0 for i in vs1]
+                self._write_vgroup(instr[1], data, mask=self._get_mask(instr))
+            case 'vrgatherei16.vv':
+                vs2 = self._read_vgroup(instr[2])
+                vs1 = self._read_vgroup(instr[3], type='unsigned', sew=16, lmul=(16/self.sew)*self.lmul)
+                data = [vs2[i] if i < self.vl else 0 for i in vs1]
+                self._write_vgroup(instr[1], data, mask=self._get_mask(instr))
+            case 'vadc.vv':
+                
+            case _:
+                    raise RVError(f"Vector module cannot run command {instr}")
