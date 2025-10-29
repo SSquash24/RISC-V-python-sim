@@ -95,17 +95,29 @@ class DisplaySim:
 
         if Float in modules:
             self.freglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, width=36, font='TkFixedFont')
-            self.freglist.grid(column=2, row=1)
+            self.freglist.grid(column=2, row=1, columnspan=2)
         else:
             self.freglist = None
 
         if Vector in modules:
-            self.vreglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16,width=72, font='TkFixedFont')
-            self.vreglist.grid(column=1, row=2, columnspan=2)
+            self.vreglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16,width=50, font='TkFixedFont')
+            self.vreglist.grid(column=0, row=2, columnspan=3)
+
+            vsettings = tk.LabelFrame(regFrame, text="Vector settings")
+            self.sewLabel = tk.IntVar()
+            self.lmulLabel = tk.StringVar()
+            self.vlLabel = tk.IntVar()
+            tk.Label(vsettings, text="SEW:").grid(row=0, column=0)
+            tk.Label(vsettings, textvariable=self.sewLabel).grid(row=0, column=1)
+            tk.Label(vsettings, text="LMUL:").grid(row=1, column=0)
+            tk.Label(vsettings, textvariable=self.lmulLabel).grid(row=1, column=1)
+            tk.Label(vsettings, text="VL:").grid(row=2, column=0)
+            tk.Label(vsettings, textvariable=self.vlLabel).grid(row=2, column=1)
+            vsettings.grid(column=3, row=2)
         else:
             self.vreglist = None
 
-        regFrame.grid(column=0, row=0, rowspan=3)
+        regFrame.grid(column=0, row=0, rowspan=3, sticky='n')
 
         if CSR in modules:
             csrFrame = ttk.LabelFrame(self.root, text="CSR")
@@ -155,8 +167,10 @@ class DisplaySim:
 
 
         self.reglist.delete(0, tk.END)
+        wordsize = self.sim.state['word_size'] * 8
         for i, reg in enumerate(self.sim.state['regs']):
-            self.reglist.insert(tk.END, f"x{str(i):<3}: {reg:0{2*self.sim.state['word_size']}x} = {reg}")
+            data = hex((reg + (1 << wordsize)) % (1 << wordsize))[2:].rjust(wordsize//4, '0')
+            self.reglist.insert(tk.END, f"x{str(i):<3}: {data} = {reg}")
 
         if self.freglist is not None:
             self.freglist.delete(0, tk.END)
@@ -164,9 +178,18 @@ class DisplaySim:
                 self.freglist.insert(tk.END, f"f{str(i):<3}: {'%08X' % int(reg.bits(), 2)} = {reg.value()}")
 
         if self.vreglist is not None:
+            hsew = self.sim.modules['Vector'].sew // 4
+            self.sewLabel.set(hsew*4)
+            hvlen = self.sim.modules['Vector'].vlen // 4
+
+            self.lmulLabel.set(self.sim.modules['Vector'].lmul)
+            self.vlLabel.set(self.sim.modules['Vector'].vl)
+
             self.vreglist.delete(0, tk.END)
             for i, reg in enumerate(self.sim.state['vregs']):
-                self.vreglist.insert(tk.END, f"v{str(i):<3}: {hex(int(reg, 2))[2:].rjust(self.sim.modules['Vector'].vlen//4, '0')}")
+                data = hex(int(reg, 2))[2:].rjust(hvlen, '0')
+                data = ','.join([data[i:i+hsew] for i in range(0,hvlen, hsew)])
+                self.vreglist.insert(tk.END, f"v{str(i):<3}: {data}")
 
         if self.csrList is not None:
             self.csrList.delete(0, tk.END)
@@ -209,4 +232,4 @@ if __name__ == '__main__':
         mb.showerror('Cannot open file', str(e))
         quit()
 
-    DisplaySim(32, code, modules)
+    DisplaySim(64, code, modules)

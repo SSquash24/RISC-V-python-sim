@@ -37,8 +37,6 @@ class Vector(Module):
     def _write_vgroup(self, reg, values, mask=None, sew=None, type=None):
         # TODO mask
 
-        print(values)
-
         if sew is None:
             sew = self.sew
 
@@ -559,4 +557,4 @@ class Vector(Module):
                 self._set_reg(instr[1], self.vl)
 
             case _:
-                        raise RVError(f"Vector module cannot run command {instr}")
+                raise RVError(f"Vector module cannot run command {instr}")
