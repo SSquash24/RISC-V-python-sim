@@ -100,7 +100,7 @@ class DisplaySim:
             self.freglist = None
 
         if Vector in modules:
-            self.vreglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16, font='TkFixedFont')
+            self.vreglist = tk.Listbox(regFrame, selectmode=tk.BROWSE, height=16,width=72, font='TkFixedFont')
             self.vreglist.grid(column=1, row=2, columnspan=2)
         else:
             self.vreglist = None
@@ -153,6 +153,7 @@ class DisplaySim:
         self.pc_var.set(hex(self.sim.state['pc']))
         self.status_var.set(self.sim.state['status'])
 
+
         self.reglist.delete(0, tk.END)
         for i, reg in enumerate(self.sim.state['regs']):
             self.reglist.insert(tk.END, f"x{str(i):<3}: {reg:0{2*self.sim.state['word_size']}x} = {reg}")
@@ -165,7 +166,7 @@ class DisplaySim:
         if self.vreglist is not None:
             self.vreglist.delete(0, tk.END)
             for i, reg in enumerate(self.sim.state['vregs']):
-                self.vreglist.insert(tk.END, f"v{str(i):<3}: {hex(int(reg, 2))[2:].rjust(self.sim.modules['Vector'].vlen//8, '0')}")
+                self.vreglist.insert(tk.END, f"v{str(i):<3}: {hex(int(reg, 2))[2:].rjust(self.sim.modules['Vector'].vlen//4, '0')}")
 
         if self.csrList is not None:
             self.csrList.delete(0, tk.END)

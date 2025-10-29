@@ -153,10 +153,16 @@
           0b001011: 'vxor.vv'
           0b001100: 'vrgather.vv'
           0b001110: 'vrgatherei16.vv'
-          0b010000: 'vadc.vvm'
-          0b010001: 'vmadc.vv'
-          0b010010: 'vsbc.vv'
-          0b010011: 'vmsbc.vv'
+          0b010000:
+            - '2'
+            - [25, 25]
+            - 0: 'vadc.vvm'
+          0b010001: 'vmadc.vvm'
+          0b010010:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vsbc.vvm'
+          0b010011: 'vmsbc.vvm'
           0b010111:
             - '2'
             - [25, 25]
@@ -181,10 +187,10 @@
           0b101001: 'vsra.vv'
           0b101010: 'vssrl.vv'
           0b101011: 'vssra.vv'
-          0b101100: 'vnsrl.vv'
-          0b101101: 'vnsra.vv'
-          0b101110: 'vnclipu.vv'
-          0b101111: 'vnclip.vv'
+          0b101100: 'vnsrl.wv'
+          0b101101: 'vnsra.wv'
+          0b101110: 'vnclipu.wv'
+          0b101111: 'vnclip.wv'
           0b110000: 'vwredsumu.vv'
           0b110001: 'vwredsum.vv'
 
