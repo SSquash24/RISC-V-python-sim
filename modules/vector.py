@@ -245,12 +245,59 @@ class Vector(Module):
                 self.state['mem'][addr] = binary + self.state['mem'][addr][len(binary):]
 
 
-    def map(self, vd, vs1, vs2, func, data_type, vm):
-        data1 = self._read_vgroup(vs1, type=data_type)
-        data2 = self._read_vgroup(vs2, type=data_type)
-        data = [func(data1[i], data2[i]) for i in range(len(data1))]
-        self._write_vgroup(vd, data, type=data_type, mask=vm)
+    def map(self, vd, vs2, vs1, func, data_type, vm=None, sewd=None, sew2=None, sew1=None, vs1type='v'):
+        datai = self._read_vgroup(vs2, type=data_type, sew=self.sew if sew2 is None else sew2)
+        match vs1type:
+            case 'v':
+                dataj = self._read_vgroup(vs1, type=data_type, sew=self.sew if sew1 is None else sew1)
+            case 'x':
+                match data_type:
+                    case 'int':
+                        dataj = self._read_reg(vs1, True)
+                    case 'unsigned':
+                        dataj = self._read_reg(vs1, False)
+                    case None:
+                        dataj = bin(self._read_reg(vs1, False))[2:].rjust(sew1, '0')
+                dataj = [dataj for _ in range(self.vl)]
+            case 'i':
+                match data_type:
+                    case 'int':
+                        dataj = vs1 if vs1 > 0 else vs1+(2**5) # convert to unsigned
+                    case 'unsigned':
+                        pass
+                    case None:
+                        dataj = self.twos_comp_bin(vs1, 5)
+                dataj = [dataj for _ in range(self.vl)]
 
+        data = [func(datai[i], dataj[i]) for i in range(self.vl)]
+        self._write_vgroup(vd, data, type=data_type, sew=self.sew if sewd is None else sewd, mask=vm)
+
+    def mmap(self, md, m1, m2, func):
+        """Reads masks m1 and m2 as an unsigned int, operates func on them, and stores in md"""
+        m1 = int(self.state['vregs'][m1][:self.vl], 2)
+        m2 = int(self.state['vregs'][m2][:self.vl], 2)
+        bits = func(m1, m2)
+        if self.ta == 1:
+            self.state['vregs'][md] = bits.ljust(self.vlen, '0')
+        else:
+            bits = bits + self.state['vregs'][md][len(bits):]
+            self.state['vregs'][md] = bits
+
+    def redmap(self, vd, vs2, vs1, func, data_type, vm):
+        data2 = self._read_vgroup(vs2, type=data_type)
+        if vm is not None:
+            data2 = [data2[i] for i in range(self.vl) if vm[i] == '1']
+        val1 = self._read_vgroup(vs1, type=data_type)[0]
+        res = func(val1, data2)
+        self._write_vgroup(vd, [res], type=data_type, sew=self.sew)
+
+
+    def cutdown(self, val, bits=None):
+        """Treats the integer as bits, cuts off high bits to reach an int that can be stored in the given bits
+        if bits=None, use self.sew"""
+        if bits is None:
+            bits = self.sew
+        return val & (int('1' * bits, 2))
 
     def round(self, flt):
         return int(flt) # TODO
@@ -369,30 +416,43 @@ class Vector(Module):
                         self.store(data[j][i], addr)
                     addr += stride
 
-            case 'vadd.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i,j: i+j, 'int', self._get_mask(instr))
+            case 'vadd.vv' | 'vadd.vx' | 'vadd.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i,j: i+j, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
 
-            case 'vsub.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: i - j, 'int', self._get_mask(instr))
-
-            case 'vminu.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: min(i,j), 'unsigned', self._get_mask(instr))
-
-            case 'vmin.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: min(i, j), 'int', self._get_mask(instr))
-            case 'vmaxu.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: max(i, j), 'unsigned', self._get_mask(instr))
-            case 'vmax.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: max(i, j), 'int', self._get_mask(instr))
-            case 'vand.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: i & j, 'unsigned', self._get_mask(instr))
-            case 'vor.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: i | j, 'unsigned', self._get_mask(instr))
-            case 'vxor.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: i ^ j, 'unsigned', self._get_mask(instr))
-            case 'vrgather.vv':
+            case 'vsub.vv' | 'vsub.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i - j, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            # TODO vsrub.vx/vi
+            case 'vminu.vv' | 'vminu.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: min(i,j), 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmin.vv' | 'vmin.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: min(i, j), 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmaxu.vv' | 'vmaxu.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: max(i, j), 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmax.vv' | 'vmax.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: max(i, j), 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vand.vv' | 'vand.vx' | 'vand.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i & j, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vor.vv' | 'vor.vx' | 'vor.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i | j, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vxor.vv' | 'vxor.vx' | 'vxor.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i ^ j, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vrgather.vv' | 'vrgather.vx' | 'vrgather.vi':
                 vs2 = self._read_vgroup(instr[2])
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                match instr[0][-1]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
+
                 data = [vs2[i] if i < self.vl else 0 for i in vs1]
                 self._write_vgroup(instr[1], data, mask=self._get_mask(instr))
             case 'vrgatherei16.vv':
@@ -400,67 +460,105 @@ class Vector(Module):
                 vs1 = self._read_vgroup(instr[3], type='unsigned', sew=16, lmul=(16/self.sew)*self.lmul)
                 data = [vs2[i] if i < self.vl else 0 for i in vs1]
                 self._write_vgroup(instr[1], data, mask=self._get_mask(instr))
-            case 'vadc.vvm':
+            # TODO vslideup.vx/vi, vslidedown.vx/vi
+            case 'vadc.vvm' | 'vadc.vxm' | 'vadc.vim':
                 vs2 = self._read_vgroup(instr[2], type='unsigned')
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                match instr[0][-2]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
+                    case 'i':
+                        vs1 = instr[3] if instr[3] >= 0 else instr[3]+(2**5)
                 mask = self._get_mask('v0.t')
                 data = [vs1[i] + vs2[i] + int(mask[i]) for i in range(self.vl)]
                 self._write_vgroup(instr[1], data, type='unsigned')
-            case 'vmadc.vvm':
+            case 'vmadc.vvm' | 'vmadc.vxm':
                 vs2 = self._read_vgroup(instr[2], type='unsigned')
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                match instr[0][-2]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
                 mask = self._get_mask(instr)
                 if mask is None:
                     mask = '0' * self.vl
                 data = ''.join(['0' if vs1[i] + vs2[i] + int(mask[i]) < (1 << self.sew) else '1' for i in range(self.vl)])
                 self.state['vregs'][0] = data.ljust(self.vlen, '0')
-            case 'vsbc.vvm':
+            case 'vsbc.vvm' | 'vsbc.vxm':
                 vs2 = self._read_vgroup(instr[2], type='unsigned')
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                match instr[0][-2]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
                 mask = self._get_mask('v0.t')
                 data = [vs2[i] - vs1[i] - int(mask[i]) for i in range(self.vl)]
                 self._write_vgroup(instr[1], data, type='unsigned')
 
-            case 'vmsbc.vvm':
+            case 'vmsbc.vvm' | 'vmsbc.vxm':
                 vs2 = self._read_vgroup(instr[2], type='unsigned')
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                match instr[0][-2]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
                 mask = self._get_mask(instr)
                 if mask is None:
                     mask = '0' * self.vl
                 data = ''.join(['0' if vs2[i] < vs1[i] + int(mask[i]) else '1' for i in range(self.vl)])
                 self.state['vregs'][0] = data.ljust(self.vlen, '0')
 
-            case 'vmerge.vvm':
+            case 'vmerge.vvm' | 'vmerge.vxm' | 'vmerge.vim':
                 vs2 = self._read_vgroup(instr[2], type='int')
-                vs1 = self._read_vgroup(instr[3], type='int')
+                match instr[0][-2]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
+                    case 'i':
+                        vs1 = instr[3] if instr[3] >= 0 else instr[3] + (2 ** 5)
                 mask = self._get_mask('v0.t')
                 data = [vs1[i] if mask[i] else vs2[i] for i in range(self.vl)]
                 self._write_vgroup(instr[1], data, type='int')
 
-            case 'vmv.v.v':
-                self._write_vgroup(instr[1], self._read_vgroup(instr[2]))
+            case 'vmv.v.v' | 'vmv.v.x' | 'vmv.v.i':
+                match instr[0][-2]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='int')
+                    case 'x':
+                        vs1 = [bin(self._read_reg(instr[3], True)) for _ in range(self.vl)]
+                    case 'i':
+                        vs1 = instr[3]
+                self._write_vgroup(instr[1], vs1, type='int')
 
-            case 'vmseq.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i == j else 0, 'int', self._get_mask(instr))
-            case 'vmsne.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i != j else 0, 'int', self._get_mask(instr))
-            case 'vmsltu.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i < j else 0, 'unsigned', self._get_mask(instr))
-            case 'vmslt.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i < j else 0, 'int', self._get_mask(instr))
-            case 'vmsleu.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i <= j else 0, 'unsigned', self._get_mask(instr))
-            case 'vmsle.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i <= j else 0, 'int', self._get_mask(instr))
-            case 'vsaddu.vv':
+            case 'vmseq.vv' | 'vmseq.vx' | 'vmseq.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i == j else 0, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmsne.vv' | 'vmsne.vx' | 'vmsne.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i != j else 0, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmsltu.vv' | 'vmsltu.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i < j else 0, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmslt.vv' | 'vmslt.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i < j else 0, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vmsleu.vv' | 'vmsleu.vx' | 'vmsleu.vi' | 'vmsle.vv' | 'vmsle.vx ' | 'vmsle.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: 1 if i <= j else 0, 'unsigned' if instr[0][-4] == 'u' else 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+
+            # TODO vmsgtu.vi, vmsgt.vi
+            case 'vsaddu.vv' | 'vsaddu.vx' | 'vsaddu.vi':
                 def vsaddu(i,j):
                     x = i + j
                     if x >= (1 << self.sew):
                         x = (1 << self.sew) - 1
                         self.vxsat = 1
                     return x
-                self.map(instr[1], instr[2], instr[3], vsaddu, 'unsigned', self._get_mask(instr))
-            case 'vsadd.vv':
+                self.map(instr[1], instr[2], instr[3], vsaddu, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vsadd.vv' | 'vsadd.vx' | 'vsadd.vi':
                 def vsadd(i,j):
                     x = i + j
                     if x >= 1 << (self.sew-1):
@@ -470,8 +568,10 @@ class Vector(Module):
                         x = -(1 << (self.sew-1))
                         self.vssat = 1
                     return x
-                self.map(instr[1], instr[2], instr[3], vsadd, 'int', self._get_mask(instr))
-            case 'vssubu.vv':
+                self.map(instr[1], instr[2], instr[3], vsadd, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            # TODO vmv[size]r.v
+            case 'vssubu.vv' | 'vssubu.vx':
                 def vssubu(i, j):
                     x = i - j
                     if x < 0:
@@ -479,8 +579,9 @@ class Vector(Module):
                         self.vxsat = 1
                     return x
 
-                self.map(instr[1], instr[2], instr[3], vssubu, 'unsigned', self._get_mask(instr))
-            case 'vssub.vv':
+                self.map(instr[1], instr[2], instr[3], vssubu, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vssub.vv' | 'vssub.vx':
                 def vssub(i, j):
                     x = i - j
                     if x >= 1 << (self.sew - 1):
@@ -491,10 +592,12 @@ class Vector(Module):
                         self.vssat = 1
                     return x
 
-                self.map(instr[1], instr[2], instr[3], vssub, 'int', self._get_mask(instr))
-            case 'vsll.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i,j: i << j, 'unsigned', self._get_mask(instr))
-            case 'vsmul.vv':
+                self.map(instr[1], instr[2], instr[3], vssub, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vsll.vv' | 'vssl.vx':
+                self.map(instr[1], instr[2], instr[3], lambda i,j: i << j, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vsmul.vv' | 'vsmul.vx':
 
                 def vsmul(i, j):
                     x = self.round(i * j / (2**(self.sew-1)))
@@ -506,31 +609,183 @@ class Vector(Module):
                         self.vssat = 1
                     return x
 
-                self.map(instr[1], instr[2], instr[3], vsmul, 'int', self._get_mask(instr))
-            case 'vsrl.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: i >> j, 'unsigned', self._get_mask(instr))
-            case 'vsra.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: i >> j, 'int', self._get_mask(instr))
-            case 'vssrl.vv':
-                self.map(instr[1], instr[2], instr[3], lambda i, j: self.round(i / (2**(j % self.sew))), 'unsigned', self._get_mask(instr))
-            case 'vssra.vv':
+                self.map(instr[1], instr[2], instr[3], vsmul, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vsrl.vv' | 'vsrl.vx' | 'vsrl.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i >> j, 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vsra.vv' | 'vsra.vx' | 'vsra.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i >> j, 'int',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vssrl.vv' | 'vssrl.vx' | 'vssrl.vi':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: self.round(i / (2**(j % self.sew))),
+                         'unsigned', self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vssra.vv' | 'vssra.vx' | 'vssra.vi':
                 vs2 = self._read_vgroup(instr[2], type='int')
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+                match instr[0][-1]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
+                    case 'i':
+                        vs1 = instr[3] if instr[3] >= 0 else instr[3] + (2 ** 5)
                 data = [self.round(vs2[i] / (2**(vs1[i] % self.sew))) for i in range(self.vl)]
                 self._write_vgroup(instr[1], data, type='unsigned', mask=self._get_mask(instr))
-            case 'vnsrl.wv':
-                vs2 = self._read_vgroup(instr[2], type='unsigned',  sew=2*self.sew, lmul=2*self.lmul)
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
-                data = [vs2[i] >> (vs1[i] % self.sew) for i in range(self.vl)]
-                self._write_vgroup(instr[1], data, type='unsigned', mask=self._get_mask(instr))
-            case 'vnsra.wv':
-                vs2 = self._read_vgroup(instr[2], type='int', sew=2 * self.sew, lmul=2 * self.lmul)
-                vs1 = self._read_vgroup(instr[3], type='unsigned')
+            case 'vnsrl.wv' | 'vnsrl.wx' | 'vnsrl.wi':
+                self.map(instr[1], instr[2], instr[3], lambda i,j: i >> (j % self.sew), 'unsigned',
+                         self._get_mask(instr), vs1type=instr[0][-1])
+            case 'vnsra.wv' | 'vnsra.wx' | 'vnsra.wi':
+                vs2 = self._read_vgroup(instr[2], type='int', sew=2 * self.sew)
+                match instr[0][-1]:
+                    case 'v':
+                        vs1 = self._read_vgroup(instr[3], type='unsigned')
+                    case 'x':
+                        vs1 = [self._read_reg(instr[3], False) for _ in range(self.vl)]
+                    case 'i':
+                        vs1 = instr[3] if instr[3] >= 0 else instr[3] + (2 ** 5)
                 data = [vs2[i] >> (vs1[i] % self.sew) for i in range(self.vl)]
                 self._write_vgroup(instr[1], data, type='int', mask=self._get_mask(instr))
 
             # TODO vnclip, vnclipu, vwredsum, vwredsumu
-            # TODO non-OPIVV
+
+            # OPMVV
+            case 'vredsum.vs':
+                self.redmap(instr[1], instr[2], instr[3], lambda i, j: i+sum(j), 'int', self._get_mask(instr))
+            case 'vredand.vs':
+                self.redmap(instr[1], instr[2], instr[3], lambda i, j: [i := i & x for x in j][-1], 'unsigned',
+                            self._get_mask(instr))
+            case 'vredor.vs':
+                self.redmap(instr[1], instr[2], instr[3], lambda i, j: [i := i | x for x in j][-1], 'unsigned',
+                    self._get_mask(instr))
+            case 'vredor.vs':
+                self.redmap(instr[1], instr[2], instr[3], lambda i, j: [i := i ^ x for x in j][-1], 'unsigned',
+                        self._get_mask(instr))
+            case 'vredminu.vs' | 'vredmin.vs':
+                self.redmap(instr[1], instr[2], instr[3], lambda i, j: min([i]+j),
+                            'unsigned' if instr[0][-4] == 'u' else 'int', self._get_mask(instr))
+            case 'vredmaxu.vs' | 'vredmax.vs':
+                self.redmap(instr[1], instr[2], instr[3], lambda i, j: max([i] + j),
+                            'unsigned' if instr[0][-4] == 'u' else 'int', self._get_mask(instr))
+            case 'vaaddu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: self.round((i+j)/2), 'unsigned', self._get_mask(instr))
+            case 'vaaddu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: self.round((i + j) / 2), 'int', self._get_mask(instr))
+            case 'vasubu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: self.round((i - j) / 2), 'unsigned', self._get_mask(instr))
+            case 'vasub.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: self.round((i - j) / 2), 'int', self._get_mask(instr))
+            case 'vmv.x.s':
+                self._set_reg(instr[1], self._read_vgroup(instr[2], type='int')[0])
+            case 'vzext.vf8' | 'vzext.vf4' | 'vzext.vf2' | 'vsext.vf8' | 'vsext.vf4' | 'vsext.vf2':
+                sew = self.sew // int(instr[0][-1])
+                elem_type = 'unsigned' if instr[0][1] == 'z' else 'int'
+                assert sew >= 8
+                data = self._read_vgroup(instr[2], sew=sew, type=elem_type)
+                self._write_vgroup(instr[1], data, type=elem_type, mask=self._get_mask(instr))
+
+            # TODO vm___.m
+
+            case 'vcompress.vm':
+                assert self.vstart == 0
+                data = self._read_vgroup(instr[2])
+                mask = self.state['vregs'][instr[3]]
+                data = [data[i] for i in range(self.vl) if mask[i] == '1']
+                self._write_vgroup(instr[1], data)
+
+            case 'vmandn.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: m1 & (m2 ^ ((2**self.vl)-1)))
+            case 'vmand.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: m1 & m2)
+            case 'vmor.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: m1 | m2)
+            case 'vmxor.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: m1 ^ m2)
+            case 'vmorn.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: m1 | (m2 ^ ((2**self.vl)-1)))
+            case 'vmnand.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: (m1 & m2) ^ ((2**self.vl)-1))
+            case 'vmnor.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: (m1 | m2) ^ ((2**self.vl)-1))
+            case 'vmxnor.mm':
+                self.mmap(instr[1], instr[2], instr[3], lambda m1, m2: (m1 ^ m2) ^ ((2 ** self.vl) - 1))
+
+            case 'vdivu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i // j, 'unsigned', self._get_mask(instr))
+            case 'vdiv.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i // j, 'int', self._get_mask(instr))
+            case 'vremu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i % j, 'unsigned', self._get_mask(instr))
+            case 'vrem.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i % j, 'int', self._get_mask(instr))
+
+            case 'vmulhu.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: (i*j)>>self.sew, 'unsigned', self._get_mask(instr))
+            case 'vmul.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: self.cutdown(i*j), 'int', self._get_mask(instr))
+            case 'vmulhsu':
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='unsigned')
+                data = [(data1[i]*data2[i]) >> self.sew for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', mask=self._get_mask(instr))
+            case 'vmulh.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: (i * j) >> self.sew, 'int', self._get_mask(instr))
+
+            case 'vmadd.vv':
+                datad = self._read_vgroup(instr[1], type='int')
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='int')
+                data = [self.cutdown((data1[i]*datad[i])+data2[i]) for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', mask=self._get_mask(instr))
+            case 'vnmsub.vv':
+                datad = self._read_vgroup(instr[1], type='int')
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='int')
+                data = [self.cutdown(-(data1[i] * datad[i]) + data2[i]) for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', mask=self._get_mask(instr))
+            case 'vmacc.vv' | 'vwmacc.vv':
+                datad = self._read_vgroup(instr[1], type='int')
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='int')
+                data = [self.cutdown((data1[i] * data2[i]) + datad[i]) for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', sew=2*self.sew if instr[0][1] == 'w' else self.sew,
+                                   mask=self._get_mask(instr))
+            case 'vnmasc.vv':
+                datad = self._read_vgroup(instr[1], type='int')
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='int')
+                data = [self.cutdown(-(data1[i] * data2[i]) + datad[i]) for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', mask=self._get_mask(instr))
+            case 'vwaddu.vv' | 'vwaddu.wv' | 'vwadd.vv' | 'vwadd.wv':
+                self.map(instr[1], instr[2], instr[3], lambda i,j:i+j, 'unsigned' if instr[0][-4] == 'u' else 'int',
+                         self._get_mask(instr), sewd=2*self.sew, sew2=self.sew if instr[0][-2] == 'v' else 2*self.sew)
+            case 'vwsubu.vv' | 'vwsubu.wv' | 'vwsub.vv' | 'vwsub.wv':
+                self.map(instr[1], instr[2], instr[3], lambda i, j: i - j, 'unsigned' if instr[0][-4] == 'u' else 'int',
+                         self._get_mask(instr), sewd=2*self.sew, sew2=self.sew if instr[0][-2] == 'v' else 2 * self.sew)
+            case 'vwmulu.vv' | 'vwmul.vv':
+                self.map(instr[1], instr[2], instr[3], lambda i,j:i*j, 'unsigned' if instr[0][-4] == 'u' else 'int',
+                         self._get_mask(instr), sewd=2*self.sew)
+            case 'vwmulsu':
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='unsigned')
+                data = [data1[i] + data2[i] for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', sew=2*self.sew, mask=self._get_mask(instr))
+
+            case 'vwmaccu.vv':
+                datad = self._read_vgroup(instr[1], type='unsigned')
+                data1 = self._read_vgroup(instr[2], type='unsigned')
+                data2 = self._read_vgroup(instr[3], type='unsigned')
+                data = [self.cutdown((data1[i] * data2[i]) + datad[i]) for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='unsigned', sew=2 * self.sew,
+                                   mask=self._get_mask(instr))
+            case 'vwmaccsu.vv':
+                datad = self._read_vgroup(instr[1], type='int')
+                data1 = self._read_vgroup(instr[2], type='int')
+                data2 = self._read_vgroup(instr[3], type='unsigned')
+                data = [self.cutdown((data1[i] * data2[i]) + datad[i]) for i in range(self.vl)]
+                self._write_vgroup(instr[1], data, type='int', sew=2 * self.sew,
+                                   mask=self._get_mask(instr))
+
+            # TODO non-OPIVV/OPMVV
             case 'vsetvli' | 'vsetivli' | 'vsetvl':
                 avl = instr[2] if instr[0][4] == 'i' else self._read_reg(instr[2])
                 if instr[0][-1] == 'i':

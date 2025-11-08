@@ -278,15 +278,42 @@
                 - 'M'
                 - [24,20]
                 - 0: 'vid.v'
-          0b010111: 'vcompress.vv'
-          0b011000: 'vmandn.vv'
-          0b011001: 'vmand.vv'
-          0b011010: 'vmor.vv'
-          0b011011: 'vmxor.vv'
-          0b011100: 'vmorn.vv'
-          0b011101: 'vmnand.vv'
-          0b011110: 'vmnor.vv'
-          0b011111: 'vmxnor.vv'
+          0b010111:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vcompress.vm'
+          0b011000:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmandn.mm'
+          0b011001:
+            - '2'
+            - [25, 25]
+            - 0: 'vmand.mm'
+          0b011010:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmor.mm'
+          0b011011:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmxor.mm'
+          0b011100:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmorn.mm'
+          0b011101:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmnand.mm'
+          0b011110:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmnor.mm'
+          0b011111:
+            - '2'
+            - [ 25, 25 ]
+            - 0: 'vmxnor.mm'
           0b100000: 'vdivu.vv'
           0b100001: 'vdiv.vv'
           0b100010: 'vremu.vv'
@@ -303,10 +330,10 @@
           0b110001: 'vwadd.vv'
           0b110010: 'vwsubu.vv'
           0b110011: 'vwsub.vv'
-          0b110100: 'vwaddu.w.vv'
-          0b110101: 'vwadd.w.vv'
-          0b110110: 'vwsubu.w.vv'
-          0b110111: 'vwsub.w.vv'
+          0b110100: 'vwaddu.wv'
+          0b110101: 'vwadd.wv'
+          0b110110: 'vwsubu.wv'
+          0b110111: 'vwsub.wv'
           0b111000: 'vwmulu.vv'
           0b111010: 'vwmulsu.vv'
           0b111011: 'vwmul.vv'
@@ -324,7 +351,7 @@
           0b001100: 'vrgather.vi'
           0b001110: 'vslideup.vi'
           0b001111: 'vslidedown.vi'
-          0b010000: 'vadc.vi'
+          0b010000: 'vadc.vim'
           0b010111:
             - '2'
             - [25,25]
@@ -354,8 +381,8 @@
           0b101001: 'vsra.vi'
           0b101010: 'vssrl.vi'
           0b101011: 'vssra.vi'
-          0b101100: 'vnsrl.vi'
-          0b101101: 'vnsra.vi'
+          0b101100: 'vnsrl.wi'
+          0b101101: 'vnsra.wi'
           0b101110: 'vnclipu.vi'
           0b101111: 'vnclip.vi'
 
@@ -376,10 +403,10 @@
           0b001100: 'vrgather.vx'
           0b001110: 'vslideup.vx'
           0b001111: 'vslidedown.vx'
-          0b010000: 'vadc.vx'
-          0b010001: 'vmadc.vx'
-          0b010010: 'vsbc.vx'
-          0b010011: 'vmsbc.vx'
+          0b010000: 'vadc.vxm'
+          0b010001: 'vmadc.vxm'
+          0b010010: 'vsbc.vxm'
+          0b010011: 'vmsbc.vxm'
           0b010111:
             - '2'
             - [25,25]
@@ -406,7 +433,7 @@
           0b101001: 'vsra.vx'
           0b101010: 'vssrl.vx'
           0b101011: 'vssra.vx'
-          0b101100: 'vnsrl.vx'
+          0b101100: 'vnsrl.wx'
           0b101101: 'vnsra.vx'
           0b101110: 'vnclipu.vx'
           0b101111: 'vnclip.vx'
@@ -466,7 +493,10 @@
           0b001011: 'vasub.vx'
           0b001110: 'vslide1up.vx'
           0b001111: 'vslide1down.vx'
-          0b010000: 'vrxunary0.vx'
+          0b010000:
+            - 'VRXUNARY0'
+            - [24, 20]
+            - 0: 'vmv.s.x'
           0b100000: 'vdivu.vx'
           0b100001: 'vdiv.vx'
           0b100010: 'vremu.vx'
