@@ -48,15 +48,19 @@ def read_yaml(filename : str, ret_CSR = False, ret_Pseudos = False):
     inv_opcodes = {}
 
     def rec_search(tree, pre, dic):
-        if type(tree) == list:
+        if type(tree) == list and isinstance(tree[-1], dict):
             if len(tree) == 3:
                 pre = [pre[0],tree[0]]
             for key, val in tree[-1].items():
                 new_dict = dict(dic)
                 new_dict[tuple(tree[-2])] = key
                 rec_search(val, pre, new_dict)
-        else:
+        elif type(tree) == str:
             inv_opcodes[tree] = pre + [dic]
+        elif type(tree) == list:
+            inv_opcodes[tree[-1]] = [pre[0], tree[0]] + [dic]
+        else:
+            raise ValueError(f"Cannot parse yaml file: {filename}")
 
     for opcode, info in opcodes.items():
 

@@ -12,7 +12,7 @@ def tcom_unassemble(module, instr, binary):
         try:
             return int(x)
         except ValueError:
-            if x[0] in ['x', 'f'] and x[1:].isdigit():
+            if x[0] in ['x', 'f', 'v'] and x[1:].isdigit():
                 return module.reg(x)
             else:
                 return x

@@ -86,12 +86,12 @@ class RISCV:
             m.reset_module()
 
     def clean_instr(self, line):
-        instr = line.strip().replace(',', '').split('#', 1)[0]
-        for key, value in reg_pseudos.items():
-            instr = instr.replace(key, value)
-        instr = instr.split()
+        instr = line.strip().replace(',', '').split('#', 1)[0].split()
         if not instr:
             return []
+
+        instr = [reg_pseudos[i] if i in reg_pseudos.keys() else i for i in instr]
+
         if instr[0] in self.state['pseudos'].keys():
             args = instr[1:]
             instr = self.state['pseudos'][instr[0]].copy()

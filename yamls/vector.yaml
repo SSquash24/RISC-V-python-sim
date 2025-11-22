@@ -10,7 +10,7 @@
 'opcode':
   0b0000111:
     - "LOAD-FP"
-    - 'M2'
+    - 'M21'
     - [28, 28]
     - 0:
       - [14, 12]
@@ -78,7 +78,7 @@
 
   0b0100111:
     - "STORE-FP"
-    - "M2"
+    - "M21"
     - [28,28]
     - 0:
       - [14, 12]
@@ -138,8 +138,7 @@
     - "OP-V"
     - "V"
     - [14, 12]
-    -
-      0b000:
+    - 0b000:
         - 'OPIVV'
         - [31, 26] # funct6
         - 0b000000: 'vadd.vv'
@@ -154,17 +153,17 @@
           0b001100: 'vrgather.vv'
           0b001110: 'vrgatherei16.vv'
           0b010000:
-            - '2'
+            - '21'
             - [25, 25]
             - 0: 'vadc.vvm'
           0b010001: 'vmadc.vvm'
           0b010010:
-            - '2'
+            - '21'
             - [ 25, 25 ]
             - 0: 'vsbc.vvm'
           0b010011: 'vmsbc.vvm'
           0b010111:
-            - '2'
+            - '21'
             - [25, 25]
             - 0: 'vmerge.vvm'
               1:
@@ -191,8 +190,8 @@
           0b101101: 'vnsra.wv'
           0b101110: 'vnclipu.wv'
           0b101111: 'vnclip.wv'
-          0b110000: 'vwredsumu.vv'
-          0b110001: 'vwredsum.vv'
+          0b110000: 'vwredsumu.vs'
+          0b110001: 'vwredsum.vs'
 
 
       0b001:
@@ -209,9 +208,45 @@
           0b001000: 'vfsgnj.vv'
           0b001001: 'vfsgnjn.vv'
           0b001010: 'vfsgnjx.vv'
-          0b010000: 'vwfunary0.vv'
-          0b010010: 'vfunary0.vv'
-          0b010011: 'vfunary1.vv'
+          0b010000: #vwfunary0
+            - '2'
+            - [25,25]
+            - 1:
+                - [19,15]
+                - 0: 'vfmv.f.s'
+          0b010010: # vfunary0
+            - 'M2'
+            - [19, 15]
+            - 0b00000: 'vfcvt.xu.f.v'
+              0b00001: 'vfcvt.x.f.v'
+              0b00010: 'vfcvt.f.xu.v'
+              0b00011: 'vfcvt.f.x.v'
+              0b00110: 'vfcvt.rtz.xu.f.v'
+              0b00111: 'vfcvt.rtz.x.f.v'
+              # widening
+              0b01000: 'vfwcvt.xu.f.v'
+              0b01001: 'vfwcvt.x.f.v'
+              0b01010: 'vfwcvt.f.xu.v'
+              0b01011: 'vfwcvt.f.x.v'
+              0b01100: 'vfwcvt.f.f.v'
+              0b01110: 'vfwcvt.rtz.xu.f.v'
+              0b01111: 'vfwcvt.rtz.x.f.v'
+              # narrowing
+              0b10000: 'vfncvt.xu.f.w'
+              0b10001: 'vfncvt.x.f.w'
+              0b10010: 'vfncvt.f.xu.w'
+              0b10011: 'vfncvt.f.x.w'
+              0b10100: 'vfncvt.f.f.w'
+              0b10101: 'vfncvt.rod.f.f.w'
+              0b10110: 'vfncvt.rtz.xu.f.w'
+              0b10111: 'vfncvt.rtz.x.f.w'
+          0b010011: # vfunary1
+            - 'M2'
+            - [19, 15]
+            - 0b00000: 'vfsqrt.v'
+              0b00100: 'vfrsqrt7.v'
+              0b00101: 'vfrec7.v'
+              0b10000: 'vfclass.v'
           0b011000: 'vmfeq.vv'
           0b011001: 'vmfle.vv'
           0b011011: 'vmflt.vv'
@@ -253,13 +288,13 @@
           0b001010: 'vasubu.vv'
           0b001011: 'vasub.vv'
           0b010000:
-            - 'VMVR'
+            - '2'
             - [25,25]
-            - 0:
+            - 1:
                 - [19,15]
                 - 0: 'vmv.x.s'
           0b010010:
-            - 'VZEXT'
+            - 'M2'
             - [19,15]
             - 2: 'vzext.vf8'
               3: 'vsext.vf8'
@@ -268,7 +303,7 @@
               6: 'vzext.vf2'
               7: 'vsext.vf2'
           0b010100:
-            - 'VZEXT'
+            - 'M2'
             - [19,15]
             - 0x01: 'vmsbf.m'
               0x02: 'vmsof.m'
@@ -279,41 +314,41 @@
                 - [24,20]
                 - 0: 'vid.v'
           0b010111:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vcompress.vm'
+            - 1: 'vcompress.vm'
           0b011000:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmandn.mm'
+            - 1: 'vmandn.mm'
           0b011001:
-            - '2'
+            - '21'
             - [25, 25]
-            - 0: 'vmand.mm'
+            - 1: 'vmand.mm'
           0b011010:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmor.mm'
+            - 1: 'vmor.mm'
           0b011011:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmxor.mm'
+            - 1: 'vmxor.mm'
           0b011100:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmorn.mm'
+            - 1: 'vmorn.mm'
           0b011101:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmnand.mm'
+            - 1: 'vmnand.mm'
           0b011110:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmnor.mm'
+            - 1: 'vmnor.mm'
           0b011111:
-            - '2'
+            - '21'
             - [ 25, 25 ]
-            - 0: 'vmxnor.mm'
+            - 1: 'vmxnor.mm'
           0b100000: 'vdivu.vv'
           0b100001: 'vdiv.vv'
           0b100010: 'vremu.vv'
@@ -322,10 +357,18 @@
           0b100101: 'vmul.vv'
           0b100110: 'vmulhsu.vv'
           0b100111: 'vmulh.vv'
-          0b101001: 'vmadd.vv'
-          0b101011: 'vnmsub.vv'
-          0b101101: 'vmacc.vv'
-          0b101111: 'vnmasc.vv'
+          0b101001:
+            - 'M12'
+            - 'vmadd.vv'
+          0b101011:
+            - 'M12'
+            - 'vnmsub.vv'
+          0b101101:
+            - 'M12'
+            - 'vmacc.vv'
+          0b101111:
+            - 'M12'
+            - 'vnmsac.vv'
           0b110000: 'vwaddu.vv'
           0b110001: 'vwadd.vv'
           0b110010: 'vwsubu.vv'
@@ -337,9 +380,15 @@
           0b111000: 'vwmulu.vv'
           0b111010: 'vwmulsu.vv'
           0b111011: 'vwmul.vv'
-          0b111100: 'vwmaccu.vv'
-          0b111101: 'vwmacc.vv'
-          0b111111: 'vwmaccsu.vv'
+          0b111100:
+            - 'M12'
+            - 'vwmaccu.vv'
+          0b111101:
+            - 'M12'
+            - 'vwmacc.vv'
+          0b111111:
+            - 'M12'
+            - 'vwmaccsu.vv'
       0b011:
         - 'OPIVI'
         - [31, 26] # funct6
@@ -351,13 +400,16 @@
           0b001100: 'vrgather.vi'
           0b001110: 'vslideup.vi'
           0b001111: 'vslidedown.vi'
-          0b010000: 'vadc.vim'
+          0b010000:
+            - '2i'
+            - [25, 25]
+            - 0: 'vadc.vim'
           0b010111:
-            - '2'
+            - '2i'
             - [25,25]
             - 0: 'vmerge.vim'
               1:
-                - '1'
+                - 'i'
                 - [24,20]
                 - 0: 'vmv.v.i'
           0b011000: 'vmseq.vi'
@@ -369,7 +421,7 @@
           0b100000: 'vsaddu.vi'
           0b100001: 'vsadd.vi'
           0b100111:
-            - 'VMVR'
+            - '2'
             - [25,25]
             - 1:
               - [19,15]
@@ -383,8 +435,8 @@
           0b101011: 'vssra.vi'
           0b101100: 'vnsrl.wi'
           0b101101: 'vnsra.wi'
-          0b101110: 'vnclipu.vi'
-          0b101111: 'vnclip.vi'
+          0b101110: 'vnclipu.wi'
+          0b101111: 'vnclip.wi'
 
 
       0b100:
@@ -403,12 +455,24 @@
           0b001100: 'vrgather.vx'
           0b001110: 'vslideup.vx'
           0b001111: 'vslidedown.vx'
-          0b010000: 'vadc.vxm'
-          0b010001: 'vmadc.vxm'
-          0b010010: 'vsbc.vxm'
-          0b010011: 'vmsbc.vxm'
+          0b010000:
+            - '21'
+            - [25, 25]
+            - 0: 'vadc.vxm'
+          0b010001:
+            - '21'
+            - [25, 25]
+            - 0: 'vmadc.vxm'
+          0b010010:
+            - '21'
+            - [25, 25]
+            - 0: 'vsbc.vxm'
+          0b010011:
+            - '21'
+            - [25, 25]
+            - 0: 'vmsbc.vxm'
           0b010111:
-            - '2'
+            - '21'
             - [25,25]
             - 0: 'vmerge.vxm'
               1:
@@ -434,9 +498,9 @@
           0b101010: 'vssrl.vx'
           0b101011: 'vssra.vx'
           0b101100: 'vnsrl.wx'
-          0b101101: 'vnsra.vx'
-          0b101110: 'vnclipu.vx'
-          0b101111: 'vnclip.vx'
+          0b101101: 'vnsra.wx'
+          0b101110: 'vnclipu.wx'
+          0b101111: 'vnclip.wx'
 
       0b101:
         - 'OPFVF'
@@ -494,9 +558,11 @@
           0b001110: 'vslide1up.vx'
           0b001111: 'vslide1down.vx'
           0b010000:
-            - 'VRXUNARY0'
-            - [24, 20]
-            - 0: 'vmv.s.x'
+            - '1'
+            - [25,25]
+            - 1:
+              - [24, 20]
+              - 0: 'vmv.s.x'
           0b100000: 'vdivu.vx'
           0b100001: 'vdiv.vx'
           0b100010: 'vremu.vx'
@@ -513,10 +579,10 @@
           0b110001: 'vwadd.vx'
           0b110010: 'vwsubu.vx'
           0b110011: 'vwsub.vx'
-          0b110100: 'vwaddu.w.vx'
-          0b110101: 'vwadd.w.vx'
-          0b110110: 'vwsubu.w.vx'
-          0b110111: 'vwsub.w.vx'
+          0b110100: 'vwaddu.wx'
+          0b110101: 'vwadd.wx'
+          0b110110: 'vwsubu.wx'
+          0b110111: 'vwsub.wx'
           0b111000: 'vwmulu.vx'
           0b111010: 'vwmulsu.vx'
           0b111011: 'vwmul.vx'
@@ -530,7 +596,7 @@
           1:
             - [30, 30]
             - 0:
-                - 'M2'
+                - 'M21'
                 - [29, 25]
                 - 0: 'vsetvl'
               1: 'vsetivli'
