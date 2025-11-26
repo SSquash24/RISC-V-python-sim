@@ -198,13 +198,13 @@
         - 'OPFVV'
         - [31, 26] # funct6
         - 0b000000: 'vfadd.vv'
-          0b000001: 'vfredusum.vv'
+          0b000001: 'vfredusum.vs'
           0b000010: 'vfsub.vv'
-          0b000011: 'vfredosum.vv'
+          0b000011: 'vfredosum.vs'
           0b000100: 'vfmin.vv'
-          0b000101: 'vfredmin.vv'
+          0b000101: 'vfredmin.vs'
           0b000110: 'vfmax.vv'
-          0b000111: 'vfredmax.vv'
+          0b000111: 'vfredmax.vs'
           0b001000: 'vfsgnj.vv'
           0b001001: 'vfsgnjn.vv'
           0b001010: 'vfsgnjx.vv'
@@ -253,25 +253,49 @@
           0b011100: 'vmfne.vv'
           0b100000: 'vfdiv.vv'
           0b100100: 'vfmul.vv'
-          0b101000: 'vfmadd.vv'
-          0b101001: 'vfnmadd.vv'
-          0b101010: 'vfmsub.vv'
-          0b101011: 'vfnmsub.vv'
-          0b101100: 'vfmacc.vv'
-          0b101101: 'vfnmacc.vv'
-          0b101110: 'vfmsac.vv'
-          0b101111: 'vfnmsac.vv'
+          0b101000:
+            - 'M12'
+            - 'vfmadd.vv'
+          0b101001:
+            - 'M12'
+            - 'vfnmadd.vv'
+          0b101010:
+            - 'M12'
+            - 'vfmsub.vv'
+          0b101011:
+            - 'M12'
+            - 'vfnmsub.vv'
+          0b101100:
+            - 'M12'
+            - 'vfmacc.vv'
+          0b101101:
+            - 'M12'
+            - 'vfnmacc.vv'
+          0b101110:
+            - 'M12'
+            - 'vfmsac.vv'
+          0b101111:
+            - 'M12'
+            - 'vfnmsac.vv'
           0b110000: 'vfwadd.vv'
-          0b110001: 'vfwredusum.vv'
+          0b110001: 'vfwredusum.vs'
           0b110010: 'vfwsub.vv'
-          0b110011: 'vfwredosum.vv'
-          0b110100: 'vfwadd.w.vv'
-          0b110110: 'vfwsub.w.vv'
+          0b110011: 'vfwredosum.vs'
+          0b110100: 'vfwadd.wv'
+          0b110110: 'vfwsub.wv'
           0b111000: 'vfwmul.vv'
-          0b111100: 'vfwmacc.vv'
-          0b111101: 'vfwnmacc.vv'
-          0b111110: 'vfwmsac.vv'
-          0b111111: 'vfwnmsac.vv'
+          0b111100:
+            - 'M12'
+            - 'vfwmacc.vv'
+          0b111101:
+            - 'M12'
+            - 'vfwnmacc.vv'
+          0b111110:
+            - 'M12'
+            - 'vfwmsac.vv'
+          0b111111:
+            - 'M12'
+            - 'vfwnmsac.vv'
       0b010:
         - 'OPMVV'
         - [31, 26] # funct6
@@ -571,10 +595,18 @@
           0b100101: 'vmul.vx'
           0b100110: 'vmulhsu.vx'
           0b100111: 'vmulh.vx'
-          0b101001: 'vmadd.vx'
-          0b101011: 'vnmsub.vx'
-          0b101101: 'vmacc.vx'
-          0b101111: 'vnmsac.vx'
+          0b101001:
+            - 'M12'
+            - 'vmadd.vx'
+          0b101011:
+            - 'M12'
+            - 'vnmsub.vx'
+          0b101101:
+            - 'M12'
+            - 'vmacc.vx'
+          0b101111:
+            - 'M12'
+            - 'vnmsac.vx'
           0b110000: 'vwaddu.vx'
           0b110001: 'vwadd.vx'
           0b110010: 'vwsubu.vx'
@@ -586,10 +618,18 @@
           0b111000: 'vwmulu.vx'
           0b111010: 'vwmulsu.vx'
           0b111011: 'vwmul.vx'
-          0b111100: 'vwmaccu.vx'
-          0b111101: 'vwmacc.vx'
-          0b111110: 'vwmaccus.vx'
-          0b111111: 'vwmaccsu.vx'
+          0b111100:
+            - 'M12'
+            - 'vwmaccu.vx'
+          0b111101:
+            - 'M12'
+            - 'vwmacc.vx'
+          0b111110:
+            - 'M12'
+            - 'vwmaccus.vx'
+          0b111111:
+            - 'M12'
+            - 'vwmaccsu.vx'
       0b111:
         - [31, 31]
         - 0: 'vsetvli'
