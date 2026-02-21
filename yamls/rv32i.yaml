@@ -3,6 +3,10 @@
 'pseudos':
   'bnez': ['bne', 'x0', 'INP:1', 'INP:2']
   'mv': ['addi', 'INP:1', 'INP:2', '0']
+  'li': ['addi', 'INP:1', 'x0', 'INP:2']
+  'j': ['jal', 'x0', 'INP:1']
+  'call': ['jal', 'x1', 'INP:1']
+  'ret': ['jalr', 'x0', 'x1', '0']
 
 base_instr_types:
   - R

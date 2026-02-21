@@ -1,19 +1,20 @@
 # test fscsr, frcsr
 
-jal x0, 12
-
-.float 4.25
-.float -12.875
-
 addi x1, x0, 96 # RUP
 fscsr x1
 frcsr x2
 
-flw f1, x0, 4
-flw f2, x0, 8
+flw f1, a
+flw f2, b
 fcvt.w.s x3, f1, DYN
 
 fadd.s f3, f1, f2, RNE
 fcvt.w.s x4, f3, RNE
 
 ebreak
+
+.data
+a:
+    .float 4.25
+b:
+    .float -12.875

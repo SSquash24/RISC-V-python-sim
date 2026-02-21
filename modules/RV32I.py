@@ -16,6 +16,7 @@ class RV32I(Module):
         state['word_size'] = 4
         state['reg_count'] = 32
         state['pseudos'] |= self.pseudos
+        state['regs'][2] = state['mem_size'] * state['word_size']
 
     # Module implementations
     def unassemble(self, binary):
@@ -210,7 +211,7 @@ class RV32I(Module):
                 self.state['pc'] += args[1] - 4
             case 'jalr':
                 self._set_reg(args[0], self.state['pc'] + 4)
-                self.state['pc'] += self._read_reg(args[1]) + args[2] - 4
+                self.state['pc'] = self._read_reg(args[1]) + args[2] - 4
             # LOAD UPPER
             case 'lui':
                 self._set_reg(args[0], args[1])
