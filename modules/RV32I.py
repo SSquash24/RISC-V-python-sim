@@ -16,7 +16,8 @@ class RV32I(Module):
         state['word_size'] = 4
         state['reg_count'] = 32
         state['pseudos'] |= self.pseudos
-        state['regs'][2] = state['mem_size'] * state['word_size']
+        state['regs'][1] = state['mem_size'] * state['word_size'] - 4
+        state['regs'][2] = state['mem_size'] * state['word_size'] - 4
 
     # Module implementations
     def unassemble(self, binary):
@@ -226,5 +227,9 @@ class RV32I(Module):
 
     def reset_module(self):
         self.state['regs'] = [0 for _ in range(self.state['reg_count'])]
+        self.state['regs'][1] = self.state['mem_size'] * self.state['word_size'] - 4
+        self.state['regs'][2] = self.state['mem_size'] * self.state['word_size'] - 4
+        self.state['mem'][self.state['mem_size'] - 1] = self.assemble("ebreak")[1]
+
 
 

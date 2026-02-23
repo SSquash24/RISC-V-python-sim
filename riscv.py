@@ -26,6 +26,8 @@ class RISCV:
         self.code = [self.assemble(*instr)[0] for instr in self.unassembled_code] + self.data
 
         self.state['mem'] = self.code + ['1' * 8 * self.state['word_size']] * (self.state['mem_size'] - len(self.code))
+        for m in self.modules.values():
+            m.reset_module()
 
     def reset(self):
         if self.state['debug']:

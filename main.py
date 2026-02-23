@@ -202,6 +202,8 @@ class DisplaySim:
             self.next_instr_var.set(self.sim.unassemble(self.sim.state['mem'][self.sim.state['pc'] // 4])[0])
         except RVError:
             self.next_instr_var.set(f"Unknown")
+        except IndexError:
+            self.next_instr_var.set(f"Out of Bounds")
 
         #mem list
         self.mem_addr_var.set(self.mem_addr_var.get()) # triggers trace effect
